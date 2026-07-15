@@ -3,15 +3,18 @@
 Browser-based calculator for estimating useful incubation windows in droplet emulsions and small-volume culture formats.
 
 Current release status:
+`v17-audit-20260715`
 
 - Conserved O₂ and tracked CO₂ are solved in amount space for closed systems.
 - Initial liquid O₂ and closed-headspace gas states are independent of the selected boundary gas.
 - Bulk demand uses Poisson occupancy classes so empty droplets do not inherit carrying capacity.
+- Bulk O₂ now switches by regime: shared mean-field when oil-mediated exchange is faster than local depletion, grouped empty/single/multi droplet pools only when transport limitation is plausible.
 - O₂ uptake is Michaelis-Menten-limited near low oxygen.
 - Partial-step endpoint acceptance reruns only the accepted fraction, so mass counters and stop times stay aligned.
 - Zero-headspace closed runs disable headspace gas exchange instead of leaking into a nonexistent gas compartment.
 - Closed tracked-CO₂ residuals are only reported for finite closed-headspace carbon-balance mode, not for external CO₂ reservoir modes.
 - Exchange half-times now support two modes: geometry-scaled reference values or directly applied measured-effective values.
+- Rate inputs now support two temperature interpretations: referenced to 37 °C with Q10 scaling, or already measured at the selected temperature with no Q10 scaling.
 - pH remains a heuristic bicarbonate/CO₂ estimate, not a full carbonate alkalinity solver.
 
 ## Use

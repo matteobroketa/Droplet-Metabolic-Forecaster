@@ -3,32 +3,48 @@ const fs = require('fs');
 const path = require('path');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'metabolic_depletion_forecaster.html'), 'utf8');
-const start = html.indexOf('const PHYS=');
-const end = html.indexOf('function runAndRender()');
+const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
+const limitations = fs.readFileSync(path.join(__dirname, '..', 'ACCURACY_AND_LIMITATIONS.md'), 'utf8');
+const start = html.indexOf('const DATA=');
+const end = html.indexOf("window.addEventListener('resize'");
 if (start < 0 || end < 0) throw new Error('Could not locate model code in HTML source.');
 
 const model = new Function(
   html.slice(start, end) +
-    '\nreturn {PHYS, o2Eq, co2Eq, geometryScales, Engine, buildOccupancyModel, bulkCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, gatherParams, hardValidateInputs};'
+    '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec};'
 )();
 
 const {
+  DATA,
+  STATE_KEY,
+  VESSELS,
   o2Eq,
   co2Eq,
   geometryScales,
+  estimateSolverWorkload,
   Engine,
   buildOccupancyModel,
   bulkCellsAt,
+  bulkGroupCellsAt,
   dryGasPctToHeadspaceMoles,
   thresholdFromMode,
   initialFlux,
   co2HeadEq,
   gatherParams,
   hardValidateInputs,
+  auditCellDatabase,
+  CELL_DATABASE_ISSUES,
+  applyModePreset,
+  applyVesselPreset,
+  applyPreset,
+  syncVesselControls,
+  vesselSpec,
 } = model;
 
 const AIR_GAS = { o2: 0.2095, co2: 0.0004 };
 const INCUBATOR_GAS = { o2: 0.95 * 0.2095, co2: 0.05 };
+let passCount = 0;
+let failCount = 0;
 
 function makeParams(overrides = {}) {
   const T = overrides.T ?? 37;
@@ -142,25 +158,77 @@ function approx(actual, expected, tol, message) {
 }
 
 function run(name, fn) {
-  fn();
-  console.log(`PASS ${name}`);
+  try {
+    fn();
+    passCount += 1;
+    console.log(`PASS ${name}`);
+  } catch (error) {
+    failCount += 1;
+    console.error(`FAIL ${name}`);
+    console.error(error && error.stack ? error.stack : error);
+  }
 }
 
 function withMockDom(values, fn) {
   const previousDocument = global.document;
   const previousData = global.DATA;
+  const previousModelData = {
+    cellLines: { ...DATA.cellLines },
+    media: { ...DATA.media },
+    oils: { ...DATA.oils },
+    additives: { ...DATA.additives },
+    refs: Array.isArray(DATA.refs) ? [...DATA.refs] : [],
+  };
+  const previousWindow = global.window;
+  const previousGetComputedStyle = global.getComputedStyle;
+  const previousDevicePixelRatio = global.devicePixelRatio;
   const elements = new Map();
   const ensure = (id, value = '') => {
     if (!elements.has(id)) {
+      const attrs = new Map();
       elements.set(id, {
         id,
         value,
+        textContent: '',
+        innerHTML: '',
+        style: {},
+        dataset: {},
         checked: false,
         type: 'number',
+        min: '',
+        max: '',
         previousElementSibling: { textContent: id },
         closest: () => null,
         classList: { toggle() {} },
         addEventListener() {},
+        getAttribute(name) {
+          if (name === 'min') return this.min === '' ? null : String(this.min);
+          if (name === 'max') return this.max === '' ? null : String(this.max);
+          return attrs.has(name) ? attrs.get(name) : null;
+        },
+        setAttribute(name, val) {
+          attrs.set(name, String(val));
+          if (name === 'min' || name === 'max') this[name] = String(val);
+        },
+        getBoundingClientRect() {
+          return { width: 760, height: 520, left: 0, top: 0 };
+        },
+        getContext() {
+          return {
+            setTransform() {},
+            clearRect() {},
+            fillRect() {},
+            beginPath() {},
+            moveTo() {},
+            lineTo() {},
+            stroke() {},
+            fillText() {},
+            save() {},
+            restore() {},
+            setLineDash() {},
+            drawImage() {},
+          };
+        },
       });
     }
     return elements.get(id);
@@ -172,14 +240,19 @@ function withMockDom(values, fn) {
   }
   global.document = {
     getElementById(id) {
-      return elements.get(id) || null;
+      return elements.get(id) || ensure(id);
     },
     querySelector(selector) {
-      if (selector.startsWith('#')) return elements.get(selector.slice(1)) || null;
+      if (selector.startsWith('#')) return elements.get(selector.slice(1)) || ensure(selector.slice(1));
+      const labelMatch = selector.match(/^label\[for="(.+)"\]$/);
+      if (labelMatch) return { textContent: labelMatch[1] };
       return null;
     },
     querySelectorAll(selector) {
       if (selector === '[id^="qty_"]') return [...elements.values()].filter((el) => el.id.startsWith('qty_'));
+      if (selector === 'input[type="number"],input[type="range"]') {
+        return [...elements.values()].filter((el) => el.type === 'number' || el.type === 'range');
+      }
       return [];
     },
   };
@@ -200,12 +273,29 @@ function withMockDom(values, fn) {
     additives: {
       test_add: { id: 'test_add', name: 'Test additive', default: 1, checked: false, mod: {}, add: {} },
     },
+    refs: [],
   };
+  DATA.cellLines = global.DATA.cellLines;
+  DATA.media = global.DATA.media;
+  DATA.oils = global.DATA.oils;
+  DATA.additives = global.DATA.additives;
+  DATA.refs = global.DATA.refs;
+  global.window = { lastResult: null, addEventListener() {} };
+  global.devicePixelRatio = 1;
+  global.getComputedStyle = () => ({ getPropertyValue: () => '#000' });
   try {
     return fn({ ensure, elements });
   } finally {
     global.document = previousDocument;
     global.DATA = previousData;
+    DATA.cellLines = previousModelData.cellLines;
+    DATA.media = previousModelData.media;
+    DATA.oils = previousModelData.oils;
+    DATA.additives = previousModelData.additives;
+    DATA.refs = previousModelData.refs;
+    global.window = previousWindow;
+    global.getComputedStyle = previousGetComputedStyle;
+    global.devicePixelRatio = previousDevicePixelRatio;
   }
 }
 
@@ -260,11 +350,13 @@ function baseFormValues(overrides = {}) {
     geometryMode: 'auto',
     modelTier: 'heuristic',
     halfTimeMode: 'reference_scaled',
+    rateTemperatureMode: 'reference_37c_q10',
     atmMode: 'closed',
     centerPenalty: '1',
     gradientFactor: '1',
     storageMode: 'static_tube',
     surfaceAccess: '3',
+    bulkO2Mode: 'auto',
     proliferation: 'off',
     doublingTime: '24',
     lagPhase: '4',
@@ -657,8 +749,15 @@ run('negative additive quantity is rejected', () => {
   );
 });
 
-run('release identity is bumped to v16', () => {
-  assert(html.includes('v16-conservative-20260715'), 'new release tag missing');
+run('public release identity is consistent', () => {
+  const release = 'v17-audit-20260715';
+  assert(html.includes(`release: ${release}`), 'artifact comment release mismatch');
+  assert(html.includes(`data-release="${release}"`), 'body release mismatch');
+  assert(html.includes(`content="${release}"`), 'meta release mismatch');
+  assert(html.includes('Metabolic Depletion Forecaster v17'), 'title release mismatch');
+  assert.strictEqual(STATE_KEY, 'metabolic-forecaster-v17-audit-20260715', 'state key mismatch');
+  assert(readme.includes(release), 'README release mismatch');
+  assert(limitations.includes(release), 'limitations release mismatch');
   assert(!html.includes('v15-confidence-20260511'), 'old release identity still present');
 });
 
@@ -815,3 +914,270 @@ run('timestep refinement changes endpoint only slightly', () => {
   );
   assert(Math.abs(coarse.safeMin - fine.safeMin) < 0.05, `endpoint should converge under timestep refinement, got ${coarse.safeMin} vs ${fine.safeMin}`);
 });
+
+run('pH ceiling endpoint is refined onto the threshold state', () => {
+  const r = Engine.simulate(
+    makeParams({
+      targetCells: 0,
+      lambda: 0,
+      rates: { ocr: 0, gcr: 0, lpr: 0, gln: 0 },
+      initialO2T: 200,
+      initialO2B: 200,
+      initialO2Oil: 200,
+      initialO2Res: 200,
+      sub: { glc: 25, gln: 4, lac: 0, bicarb: 26 },
+      pH0: 7.2,
+      pHCeiling: 7.55,
+      CO2Initial: 5,
+      CO2Boundary: 0.2,
+      pHBoundaryMode: 'fixed_starting_pH_boundary',
+      gasHalf: 1e9,
+      oilHalf: 1e9,
+      dropHalf: 0.5,
+      maxDays: 0.5,
+      atmMode: 'incubator',
+      o2Threshold: 0,
+    })
+  );
+  approx(r.final.pH, 7.55, 1e-3, 'accepted pH-ceiling endpoint should lie on the pH ceiling');
+});
+
+run('glutamine overshoot uses raw trial concentration for event timing', () => {
+  const r = Engine.simulate(
+    makeParams({
+      targetCells: 1,
+      lambda: 0,
+      sub: { glc: 25, gln: 0.06, lac: 0, bicarb: 26 },
+      glutamineFloor: 0.05,
+      rates: { ocr: 0, gcr: 0, lpr: 0, gln: 60 },
+      initialO2T: 200,
+      initialO2B: 200,
+      initialO2Oil: 0,
+      initialO2Res: 0,
+      gasHalf: 1e9,
+      oilHalf: 1e9,
+      dropHalf: 1e9,
+      maxDays: 0.01,
+      atmMode: 'closed',
+      headspace_mL: 0,
+      o2Threshold: 0,
+    })
+  );
+  assert(r.safeMin > 0 && r.safeMin < 0.5, `glutamine endpoint should be refined within the step, got ${r.safeMin}`);
+});
+
+run('measured-effective half-times ignore vessel geometry changes', () => {
+  const a = Engine.simulate(makeParams({ halfTimeMode: 'measured_effective', dropHalf: 10, gasHalf: 120, oilHalf: 240, vesselArea_mm2: 10, emulsionDepth_mm: 10, volume_nL: 0.07, maxDays: 0.01 }));
+  const b = Engine.simulate(makeParams({ halfTimeMode: 'measured_effective', dropHalf: 10, gasHalf: 120, oilHalf: 240, vesselArea_mm2: 300, emulsionDepth_mm: 0.2, volume_nL: 5, maxDays: 0.01 }));
+  approx(a.effective.gasResHalf, b.effective.gasResHalf, 1e-9, 'measured-effective gas half-time changed');
+  approx(a.effective.oilHalf, b.effective.oilHalf, 1e-9, 'measured-effective oil half-time changed');
+  approx(a.effective.dropTargetHalf, b.effective.dropTargetHalf, 1e-9, 'measured-effective droplet half-time changed');
+});
+
+run('reference-scaled half-times respond to droplet size and vessel geometry', () => {
+  const small = Engine.simulate(makeParams({ halfTimeMode: 'reference_scaled', dropHalf: 10, volume_nL: 0.07, maxDays: 0.01 }));
+  const large = Engine.simulate(makeParams({ halfTimeMode: 'reference_scaled', dropHalf: 10, volume_nL: 7, maxDays: 0.01 }));
+  assert(small.effective.dropTargetHalf < large.effective.dropTargetHalf, 'reference scaling should change droplet half-time with droplet size');
+});
+
+run('anoxic selected-gas threshold is rejected for pure nitrogen', () => {
+  withMockDom(
+    baseFormValues({
+      headspaceGas: 'nitrogen',
+      o2ThresholdMode: 'selected_pct',
+      atmMode: 'incubator',
+    }),
+    () => {
+      const p = gatherParams();
+      assert(p.invalid.some((msg) => msg.includes('selected-gas O₂ thresholds are invalid')), 'pure nitrogen selected-gas threshold should be blocked');
+    }
+  );
+});
+
+run('anoxic selected-gas threshold is rejected for 95% N2 / 5% CO2', () => {
+  withMockDom(
+    baseFormValues({
+      headspaceGas: 'n2co2',
+      o2ThresholdMode: 'selected_pct',
+      atmMode: 'incubator',
+    }),
+    () => {
+      const p = gatherParams();
+      assert(p.invalid.some((msg) => msg.includes('selected-gas O₂ thresholds are invalid')), '95% N2 / 5% CO2 selected-gas threshold should be blocked');
+    }
+  );
+});
+
+run('empty droplets keep their oxygen when oil exchange is negligible', () => {
+  const lambda = 0.1;
+  const occupancy = buildOccupancyModel(lambda, 1000, 1);
+  const r = Engine.simulate(
+    makeParams({
+      bulkO2Mode: 'grouped_transport_limited',
+      lambda,
+      N: 1000,
+      occupancy,
+      Vaq_uL: 1,
+      targetCells: 0,
+      rates: { ocr: 200, gcr: 0, lpr: 0, gln: 0 },
+      initialO2T: 10,
+      initialO2B: 10,
+      initialO2Oil: 0,
+      initialO2Res: 0,
+      gasHalf: 1e9,
+      oilHalf: 1e9,
+      dropHalf: 1e9,
+      maxDays: 0.1,
+      atmMode: 'closed',
+      headspace_mL: 0,
+      o2Threshold: 0,
+    })
+  );
+  assert(r.final.O2Empty > 9.9, `empty droplets should keep oxygen when decoupled from oil, got ${r.final.O2Empty}`);
+  assert(r.final.O2BulkOccupied < 9, `occupied droplets should consume only their own oxygen, got ${r.final.O2BulkOccupied}`);
+});
+
+run('preset synchronization resets PTFE kinetics when returning to a static tube', () => {
+  withMockDom(baseFormValues({ vesselPreset: 'ptfe_600', vesselPresetEnv: 'ptfe_600', storageMode: 'ptfe_tubing' }), () => {
+    applyVesselPreset();
+    assert.strictEqual(String(global.document.getElementById('gasHalf').value), '10');
+    global.document.getElementById('vesselPreset').value = 'eppendorf_1_5';
+    global.document.getElementById('vesselPresetEnv').value = 'eppendorf_1_5';
+    applyVesselPreset();
+    assert.strictEqual(String(global.document.getElementById('storageMode').value), 'static_tube');
+    assert.strictEqual(String(global.document.getElementById('gasHalf').value), '150');
+    assert.strictEqual(String(global.document.getElementById('dropHalf').value), '10');
+  });
+});
+
+run('reservoir preset selects a vessel large enough for its liquid fill', () => {
+  withMockDom(baseFormValues(), () => {
+    applyPreset('reservoir');
+    const p = gatherParams();
+    assert.strictEqual(p.vessel.id, 'falcon_15', 'reservoir preset should use 15 mL conical tube');
+    assert(!p.invalid.some((msg) => msg.includes('exceeds')), 'reservoir preset should not overflow its vessel');
+  });
+});
+
+run('closed preset does not rely on a stale manual headspace value', () => {
+  withMockDom(baseFormValues({ headspaceVolume: '9.99' }), () => {
+    applyPreset('closed');
+    const p = gatherParams();
+    assert.strictEqual(p.vessel.id, 'eppendorf_1_5');
+    assert(p.headspace_mL < 1.0, `closed preset should use auto headspace from vessel geometry, got ${p.headspace_mL}`);
+  });
+});
+
+run('rate temperature interpretation applies Q10 only in reference mode', () => {
+  withMockDom(baseFormValues({ temperature: '33', rateTemperatureMode: 'reference_37c_q10' }), () => {
+    const p = gatherParams();
+    assert(p.q10Factor.ocr < 1, '33 C reference mode should reduce OCR via Q10');
+  });
+  withMockDom(baseFormValues({ temperature: '42', rateTemperatureMode: 'reference_37c_q10' }), () => {
+    const p = gatherParams();
+    assert(p.q10Factor.ocr > 1, '42 C reference mode should increase OCR via Q10');
+  });
+  withMockDom(baseFormValues({ temperature: '33', rateTemperatureMode: 'measured_selected_temperature' }), () => {
+    const p = gatherParams();
+    approx(p.q10Factor.ocr, 1, 1e-12, 'measured-temperature mode should not apply OCR Q10');
+    approx(p.q10Factor.gcr, 1, 1e-12, 'measured-temperature mode should not apply GCR Q10');
+  });
+});
+
+run('generic min/max enforcement catches temperature, surface exposure, and decimals', () => {
+  withMockDom(
+    baseFormValues({
+      temperature: '50',
+      surfaceAccess: '200',
+      decimals: '20',
+    }),
+    () => {
+      const p = gatherParams();
+      assert(p.invalid.some((msg) => msg.includes('Temperature')), 'temperature max validation missing');
+      assert(p.invalid.some((msg) => msg.includes('Direct exposed emulsion oil')), 'surface access max validation missing');
+      assert(p.invalid.some((msg) => msg.includes('Decimals')), 'decimals max validation missing');
+    }
+  );
+});
+
+run('cell database audit reports no remaining duplicate selectable names', () => {
+  assert.strictEqual(CELL_DATABASE_ISSUES.length, 0, CELL_DATABASE_ISSUES.join('\n'));
+  assert.strictEqual(auditCellDatabase(DATA.cellLines).length, 0, 'cell database audit should pass');
+});
+
+run('cell database metadata fixes HeLa and downgrades NIH 3T3 confidence', () => {
+  assert(/Cervix/i.test(DATA.cellLines.hela.group), `HeLa group should be cervix, got ${DATA.cellLines.hela.group}`);
+  assert(!/Lung/i.test(DATA.cellLines.hela.rateBasis), `HeLa rate basis should not mention lung fallback, got ${DATA.cellLines.hela.rateBasis}`);
+  assert.strictEqual(DATA.cellLines.nih3t3.rateTier, 'C', 'NIH 3T3 should not remain Tier A');
+  assert(!/Human MSC\/ASC/i.test(DATA.cellLines.nih3t3.rateBasis), 'NIH 3T3 basis should not claim human MSC/ASC Tier A evidence');
+});
+
+run('solver accepted-step budget fails gracefully', () => {
+  const r = Engine.simulate(
+    makeParams({
+      maxDays: 10,
+      maxAcceptedSteps: 2,
+      gasHalf: 0.1,
+      oilHalf: 0.1,
+      dropHalf: 0.1,
+      o2Threshold: 0,
+    })
+  );
+  assert(r.error && r.error.includes('accepted-step budget exceeded'), `expected solver budget error, got ${r.error}`);
+});
+
+run('workload estimator flags very expensive configurations', () => {
+  const estimate = estimateSolverWorkload(makeParams({ maxDays: 14, gasHalf: 0.1, oilHalf: 0.1, dropHalf: 0.1 }));
+  assert(estimate.estimatedSteps > 1000, 'workload estimate should increase for fast-kinetic long-horizon runs');
+});
+
+run('auto bulk O2 matches the shared mean-field limit when exchange is fast', () => {
+  const base = makeParams({
+    bulkO2Mode: 'auto',
+    lambda: 0.1,
+    dropHalf: 0.01,
+    gasHalf: 1e9,
+    oilHalf: 1e9,
+    rates: { ocr: 2, gcr: 0, lpr: 0, gln: 0 },
+    maxDays: 0.01,
+    o2Threshold: 0,
+  });
+  const auto = Engine.simulate(base);
+  const shared = Engine.simulate({ ...base, bulkO2Mode: 'shared_mean_field' });
+  assert.strictEqual(auto.bulkO2Regime.selectedMode, 'shared_mean_field', 'auto mode should stay shared when exchange is fast');
+  approx(auto.safeMin, shared.safeMin, 1e-9, 'auto mode should match the shared limit');
+});
+
+run('auto bulk O2 matches the grouped isolated-droplet limit when exchange is slow', () => {
+  const lambda = 0.1;
+  const occupancy = buildOccupancyModel(lambda, 1000, 0);
+  const base = makeParams({
+    bulkO2Mode: 'auto',
+    lambda,
+    N: 1000,
+    occupancy,
+    Vaq_uL: 1,
+    targetCells: 0,
+    dropHalf: 1e9,
+    gasHalf: 1e9,
+    oilHalf: 1e9,
+    rates: { ocr: 200, gcr: 0, lpr: 0, gln: 0 },
+    initialO2T: 10,
+    initialO2B: 10,
+    initialO2Oil: 0,
+    initialO2Res: 0,
+    maxDays: 0.1,
+    atmMode: 'closed',
+    headspace_mL: 0,
+    o2Threshold: 0,
+  });
+  const auto = Engine.simulate(base);
+  const grouped = Engine.simulate({ ...base, bulkO2Mode: 'grouped_transport_limited' });
+  assert.strictEqual(auto.bulkO2Regime.selectedMode, 'grouped_transport_limited', 'auto mode should switch to grouped when exchange is slow');
+  approx(auto.final.O2Empty, grouped.final.O2Empty, 1e-9, 'auto grouped mode should match the isolated-droplet limit');
+  approx(auto.final.O2BulkOccupied, grouped.final.O2BulkOccupied, 1e-9, 'auto grouped mode should match occupied-droplet depletion');
+});
+
+console.log(`PASS: ${passCount}`);
+console.log(`FAIL: ${failCount}`);
+process.exit(failCount === 0 ? 0 : 1);

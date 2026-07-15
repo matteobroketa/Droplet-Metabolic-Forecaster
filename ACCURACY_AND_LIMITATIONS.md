@@ -4,6 +4,9 @@ The Metabolic Depletion Forecaster estimates how long cells may remain in a drop
 
 The result should be read as a **planning estimate**, not as a guaranteed incubation limit. Real cultures vary with passage number, medium, serum, oxygen tension, pH, cell density, adaptation state, and the actual gas-exchange geometry of the device.
 
+Audited release:
+`v17-audit-20260715`
+
 ## What is corrected in this release
 
 - Closed-headspace O₂ and tracked CO₂ are updated in conserved amounts rather than concentration clamps.
@@ -16,11 +19,13 @@ The result should be read as a **planning estimate**, not as a guaranteed incuba
 - Closed zero-headspace configurations disable headspace gas exchange rather than transferring mass into a zero-volume gas compartment.
 - Closed tracked-CO₂ residuals are only meaningful in finite closed-headspace CO₂ mass-balance mode. External CO₂ reservoir modes are not treated as closed carbon balances.
 - Exchange half-times can be entered either as reference values to be geometry-scaled or as measured-effective values for the exact current configuration.
+- Bulk O₂ can remain a shared mean-field reservoir when oil-mediated equilibration is fast, or switch to grouped empty/single/multi droplet pools when local depletion is transport-limited.
+- Rate inputs can be interpreted either as 37 °C reference rates with Q10 scaling or as already measured at the selected temperature with no Q10 scaling.
 
 ## Remaining important limitations
 
 - The pH layer is still heuristic. It uses bicarbonate, dissolved CO₂, lactate, and a buffer-capacity approximation, not a full DIC and alkalinity solver.
-- Bulk nutrients are not resolved by occupancy class; bulk O₂ and CO₂ remain mean-field shared states.
+- Bulk nutrients are not resolved by occupancy class. Bulk O₂ can be shared or grouped depending on the selected or inferred transport regime, but nutrient depletion remains mean-field.
 - Growth remains a logistic approximation and is not fully coupled to all environmental stressors.
 
 ## What the tool predicts
