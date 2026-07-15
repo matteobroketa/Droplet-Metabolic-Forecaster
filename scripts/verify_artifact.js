@@ -1,7 +1,18 @@
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
 const root = path.join(__dirname, '..');
+function stableArtifactManifestHash(manifest) {
+  const clone = JSON.parse(JSON.stringify(manifest));
+  if (clone.files && typeof clone.files === 'object') {
+    delete clone.files['metabolic_depletion_forecaster.html'];
+  }
+  return crypto.createHash('sha256').update(JSON.stringify(clone, null, 2)).digest('hex').toUpperCase();
+}
+const manifestText = fs.readFileSync(path.join(root, 'AUDIT_MANIFEST.json'), 'utf8');
+const manifest = JSON.parse(manifestText);
+const manifestSha256 = stableArtifactManifestHash(manifest);
 const files = {
   html: fs.readFileSync(path.join(root, 'metabolic_depletion_forecaster.html'), 'utf8'),
   readme: fs.readFileSync(path.join(root, 'README.md'), 'utf8'),
@@ -10,11 +21,13 @@ const files = {
   validation: fs.readFileSync(path.join(root, 'VALIDATION.md'), 'utf8'),
 };
 
-const release = 'v18-transport-20260715';
+const release = manifest.release;
 const checks = [
   [files.html.includes(`release: ${release}`), 'artifact comment release mismatch'],
   [files.html.includes(`data-release="${release}"`), 'body release mismatch'],
   [files.html.includes(`content="${release}"`), 'meta release mismatch'],
+  [files.html.includes(`meta name="artifact-commit" content="${manifest.gitCommit}"`), 'artifact commit metadata mismatch'],
+  [files.html.includes(`meta name="artifact-manifest-sha256" content="${manifestSha256}"`), 'artifact manifest hash metadata mismatch'],
   [files.html.includes('Metabolic Depletion Forecaster v18'), 'title release mismatch'],
   [files.html.includes('finitePairConductance'), 'finite-pair half-time helper missing'],
   [files.html.includes('solveLinearExchange'), 'coupled exchange solver missing'],

@@ -11,7 +11,7 @@ if (start < 0 || end < 0) throw new Error('Could not locate model code in HTML s
 
 const model = new Function(
   html.slice(start, end) +
-    '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec, buildRateScenarioResults};'
+    '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec, buildRateScenarioResults, buildExportPayload};'
 )();
 
 const {
@@ -40,6 +40,7 @@ const {
   syncVesselControls,
   vesselSpec,
   buildRateScenarioResults,
+  buildExportPayload,
 } = model;
 
 const AIR_GAS = { o2: 0.2095, co2: 0.0004 };
@@ -243,16 +244,21 @@ function withMockDom(values, fn) {
     else el.value = config;
   }
   global.document = {
+    body: { dataset: { release: 'v18-transport-20260715' } },
     getElementById(id) {
       return elements.get(id) || ensure(id);
     },
     querySelector(selector) {
       if (selector.startsWith('#')) return elements.get(selector.slice(1)) || ensure(selector.slice(1));
+      if (selector === 'meta[name="artifact-release"]') return { content: 'v18-transport-20260715' };
+      if (selector === 'meta[name="artifact-commit"]') return { content: 'd4032d9863245a89b4113788fed2cea33372da1f' };
+      if (selector === 'meta[name="artifact-manifest-sha256"]') return { content: '0F565D0469D0C76F51DC31EF5C39D6EC57B6AF1A1B4D16F721C5254BF4A1E1A5' };
       const labelMatch = selector.match(/^label\[for="(.+)"\]$/);
       if (labelMatch) return { textContent: labelMatch[1] };
       return null;
     },
     querySelectorAll(selector) {
+      if (selector === 'input,select') return [...elements.values()];
       if (selector === '[id^="qty_"]') return [...elements.values()].filter((el) => el.id.startsWith('qty_'));
       if (selector === 'input[type="number"],input[type="range"]') {
         return [...elements.values()].filter((el) => el.type === 'number' || el.type === 'range');
@@ -1271,6 +1277,26 @@ run('deterministic rate scenarios fall back to current rates when custom or over
   const scenarios = buildRateScenarioResults(p);
   assert(scenarios.every((s) => s.available === (s.id === 'nominal')), 'custom/override cases should only have exact nominal bounds');
   assert(scenarios.every((s) => Math.abs(s.rates.ocr - 3) < 1e-12), 'fallback scenarios should reuse current effective rates');
+});
+
+run('JSON export payload includes reproducibility metadata and conductances', () => {
+  withMockDom(baseFormValues(), () => {
+    const p = gatherParams();
+    const r = Engine.simulate(p);
+    r.rateScenarios = buildRateScenarioResults(p);
+    const payload = buildExportPayload(r);
+    assert.strictEqual(payload.release, 'v18-transport-20260715', 'export release mismatch');
+    assert.strictEqual(payload.artifactCommit, 'd4032d9863245a89b4113788fed2cea33372da1f', 'export artifact commit mismatch');
+    assert(payload.auditManifestSha256 && payload.auditManifestSha256.length === 64, 'export manifest hash missing');
+    assert(payload.rawInputs && payload.rawInputs.cellLine === 'test_cell', 'raw input snapshot missing');
+    assert(payload.effectiveParameters && payload.effectiveParameters.cell.id === 'test_cell', 'effective parameters missing');
+    assert(payload.parameterProvenance && payload.parameterProvenance.cellLine.source, 'parameter provenance missing');
+    assert(payload.actualConductances && payload.actualConductances.fmolPerMinPerUM.dropTarget >= 0, 'conductance summary missing');
+    assert(payload.solverTolerances && payload.solverTolerances.rootMaxIterationsPerEvent === 36, 'solver tolerances missing');
+    assert(Array.isArray(payload.warnings), 'export warnings missing');
+    assert(Array.isArray(payload.rateScenarios) && payload.rateScenarios.length === 3, 'export rate scenarios missing');
+    assert.strictEqual(typeof payload.trackedCarbonResidualApplicable, 'boolean', 'tracked-carbon applicability missing');
+  });
 });
 
 run('generic min/max enforcement catches temperature, surface exposure, and decimals', () => {

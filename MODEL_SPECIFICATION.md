@@ -65,6 +65,20 @@ The artifact can also run three deterministic demand scenarios:
 
 When stored `low/nominal/high` bounds exist for the selected cell line, those bounds are propagated through the current additive, Warburg, and temperature modifiers by scaling around the current effective nominal rates. When stored bounds are unavailable because the user is using custom or explicit override rates, the current effective rates are reused and the UI marks that limitation explicitly.
 
+## Export reproducibility
+
+JSON exports include:
+
+- audited release identifier
+- audited source commit from the manifest
+- audit-manifest SHA-256 stamped into the artifact
+- raw DOM input snapshot
+- effective simulation parameters
+- parameter provenance summary
+- actual transport conductances
+- solver tolerances and diagnostics
+- warnings and deterministic scenario summaries
+
 ## Carbon accounting
 
 Tracked carbon currently includes:

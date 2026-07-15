@@ -10,7 +10,7 @@ Primary regression command:
 node tests/audit_regression.js
 ```
 
-Current minimum enforced checks: `56`
+Current minimum enforced checks: `57`
 
 The regression suite covers:
 
@@ -28,6 +28,7 @@ The regression suite covers:
 - shared-limit and isolated-droplet-limit bulk oxygen checks
 - transport-limited warning detection with grouped comparison still available
 - deterministic low/nominal/high demand scenario generation
+- export reproducibility metadata
 - preset and vessel synchronization
 - database integrity checks
 - solver-budget protection
@@ -43,6 +44,7 @@ npm run test:browser
 The browser smoke test verifies:
 
 - current release label on load
+- artifact commit and manifest hash metadata are stamped
 - default calculation renders
 - measured-effective mode renders diagnostics
 - incompatible finite-headspace carbon mode blocks calculation

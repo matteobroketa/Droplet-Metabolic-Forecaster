@@ -22,6 +22,8 @@ await page.goto(url);
 await page.waitForSelector('#safeTime');
 
 assert((await page.locator('body').getAttribute('data-release')) === 'v18-transport-20260715', 'stale release on browser load');
+assert(((await page.locator('meta[name="artifact-commit"]').getAttribute('content')) || '').length === 40, 'artifact commit metadata missing');
+assert(((await page.locator('meta[name="artifact-manifest-sha256"]').getAttribute('content')) || '').length === 64, 'artifact manifest hash metadata missing');
 assert((await page.locator('#safeTime').textContent()).trim().length > 0, 'default calculation missing');
 
 await page.selectOption('#halfTimeMode', 'measured_effective', { force: true });
