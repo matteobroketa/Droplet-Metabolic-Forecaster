@@ -1,0 +1,37 @@
+[
+  [
+    "Gas exchange",
+    "Fluorinated oils",
+    "Bjork et al. 2015: oxygen can be transported to droplets from fluorinated carrier oil, with much higher oxygen capacity than water."
+  ],
+  [
+    "Gas exchange",
+    "Bulk droplet incubation",
+    "Mahler et al. 2015: large droplet populations can suffer restricted and heterogeneous oxygen availability; dynamic droplet incubation uses an oil reservoir as gas exchange unit and bubble trap."
+  ],
+  [
+    "Gas exchange",
+    "PDMS culture",
+    "Kasahara et al. 2023: PDMS gas permeability enables O₂ control by diffusive exchange through chip material; millimeter-scale thickness can create exchange times around 80–90 min."
+  ],
+  [
+    "Gas exchange",
+    "Droplets are not closed to gases",
+    "Joensson & Svahn 2012: fluorocarbon oils have superior oxygen transport and droplets may exchange components across the interface."
+  ],
+  [
+    "Gas exchange",
+    "O₂ purged devices",
+    "Xia et al. 2016: oxygen permeability of PDMS can maintain oil oxygen concentration and enhance viability in microfluidic culture devices."
+  ],
+  [
+    "Physical chemistry",
+    "Henry law and gas solubility",
+    "Battino et al. 1983; Wilhelm et al. 1977; model uses aqueous O₂ equilibrium with vapor-pressure correction."
+  ],
+  [
+    "pH model",
+    "Bicarbonate and lactate",
+    "Eagle 1971; lactate production is converted into approximate pH shift using total buffer capacity."
+  ]
+]

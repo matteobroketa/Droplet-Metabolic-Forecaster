@@ -99,7 +99,7 @@ function oilParameterRecord(oil, parameter, unit) {
 }
 
 function buildParameterProvenance(root) {
-  const { DATA, CELL_DATABASE_ISSUES } = loadSourceData(root);
+  const { DATA, sourcePaths } = loadSourceData(root);
   const cellLines = Object.fromEntries(
     Object.entries(DATA.cellLines).map(([id, cell]) => [
       id,
@@ -140,7 +140,8 @@ function buildParameterProvenance(root) {
   return {
     schemaVersion: 1,
     generatedFrom: {
-      sourceFile: path.join('src', 'app', '00_model_and_solver.js').replaceAll(path.sep, '/'),
+      sourceFile: 'src/data/*.json',
+      sourceFiles: Object.values(sourcePaths),
       generator: path.join('scripts', 'build_parameter_provenance.js').replaceAll(path.sep, '/'),
     },
     requiredFields: [
@@ -154,7 +155,6 @@ function buildParameterProvenance(root) {
       'confidenceTier',
       'notes',
     ],
-    cellDatabaseIssues: CELL_DATABASE_ISSUES,
     cellLines,
     media,
     oils,

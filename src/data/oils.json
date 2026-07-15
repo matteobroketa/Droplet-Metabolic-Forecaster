@@ -1,0 +1,68 @@
+{
+  "hfe7500": {
+    "id": "hfe7500",
+    "name": "HFE-7500 / Novec 7500",
+    "capacityRatio": 14,
+    "defaultDropHalf": 8,
+    "refs": [
+      "Bjork et al. 2015: fluorinated carrier oil can supply oxygen to droplets and has much higher oxygen capacity than water",
+      "Baret et al. 2009 DOI 10.1039/b902824c"
+    ]
+  },
+  "novec7100": {
+    "id": "novec7100",
+    "name": "Novec 7100",
+    "capacityRatio": 12,
+    "defaultDropHalf": 10,
+    "refs": [
+      "Perfluorinated oil planning estimate"
+    ]
+  },
+  "fc40": {
+    "id": "fc40",
+    "name": "Fluorinert FC-40",
+    "capacityRatio": 20,
+    "defaultDropHalf": 7,
+    "refs": [
+      "Joensson & Svahn 2012: fluorocarbon oils have superior oxygen transport properties; capacity set near commonly cited ~20× water value"
+    ]
+  },
+  "mineral_oil": {
+    "id": "mineral_oil",
+    "name": "Mineral oil",
+    "capacityRatio": 2.5,
+    "defaultDropHalf": 45,
+    "refs": [
+      "Hydrocarbon oil lower oxygen transport estimate",
+      "Leclerc et al. 2003 DOI 10.1039/b304395d"
+    ]
+  },
+  "hexadecane": {
+    "id": "hexadecane",
+    "name": "Hexadecane",
+    "capacityRatio": 3.5,
+    "defaultDropHalf": 35,
+    "refs": [
+      "Hydrocarbon oil estimate"
+    ]
+  },
+  "silicone_oil": {
+    "id": "silicone_oil",
+    "name": "Silicone oil",
+    "capacityRatio": 8,
+    "defaultDropHalf": 15,
+    "refs": [
+      "Toepke & Beebe 2006 DOI 10.1039/b612140c"
+    ]
+  },
+  "pdms": {
+    "id": "pdms",
+    "name": "PDMS wall / chip phase",
+    "capacityRatio": 18,
+    "defaultDropHalf": 6,
+    "refs": [
+      "Merkel et al. 2000 DOI 10.1021/ma991685o",
+      "Skolimowski et al. 2010 Lab Chip 10:1030"
+    ]
+  }
+}

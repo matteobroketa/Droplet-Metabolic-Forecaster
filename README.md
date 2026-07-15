@@ -28,15 +28,18 @@ Current release status:
 Open `metabolic_depletion_forecaster.html` in a browser.
 
 The committed standalone artifact is generated deterministically from `src/standalone_artifact.template.html`, the ordered `src/app/*.js` source modules, and the current audit-manifest metadata.
+Scientific runtime defaults for cell lines, media, oils, and reference rows now live in `src/data/*.json`; the offline runtime bundle in `src/app/00_data.generated.js` is generated deterministically from those source catalogs.
 
 Run regression checks with:
 
 ```bash
 npm run build:provenance
+npm run build:data
 npm run check:syntax
 npm test
 npm run test:browser
 npm run build
+npm run verify:data
 npm run verify:artifact
 npm run verify:manifest
 npm run verify:provenance
@@ -51,6 +54,7 @@ Supporting audit docs:
 - `MODEL_SPECIFICATION.md`
 - `VALIDATION.md`
 - `AUDIT_MANIFEST.json`
+- `src/data/`
 - `data/parameter_provenance.json`
 
 ## Main controls

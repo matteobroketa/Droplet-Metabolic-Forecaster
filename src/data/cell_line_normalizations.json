@@ -1,0 +1,21 @@
+{
+  "hela": {
+    "group": "Human — Cervix / Epithelial",
+    "fullName": "Cervical adenocarcinoma",
+    "tissue": "Cervix",
+    "diseaseModel": "Cervical adenocarcinoma",
+    "rateTier": "B",
+    "evidenceTier": "B",
+    "rateBasis": "Mixed HeLa-specific nutrient-rate literature plus broad cancer OCR ranges; use measured exchange and scenario bounds for quantitative work.",
+    "estimateBasis": "Mixed HeLa-specific nutrient-rate literature plus broad cancer OCR ranges; use measured exchange and scenario bounds for quantitative work."
+  },
+  "nih3t3": {
+    "group": "Mouse — Fibroblast",
+    "tissue": "Mouse embryonic fibroblast",
+    "diseaseModel": "Mouse embryonic fibroblast",
+    "rateTier": "C",
+    "evidenceTier": "C",
+    "rateBasis": "Indirect fibroblast and mesenchymal analog literature with species/context mismatch; replace with measured NIH 3T3 rates for quantitative work.",
+    "estimateBasis": "Indirect fibroblast and mesenchymal analog literature with species/context mismatch; replace with measured NIH 3T3 rates for quantitative work."
+  }
+}

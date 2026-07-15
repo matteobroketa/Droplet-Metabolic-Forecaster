@@ -15,6 +15,8 @@ This artifact is a standalone planning model for droplet emulsions and small-vol
 - optional finite headspace oxygen
 - target-droplet glucose, glutamine, lactate, tracked aqueous carbon, and selectable pH model
 
+Authoritative runtime defaults for cell lines, media, oils, and reference rows are stored separately in `src/data/*.json`. Those source catalogs are compiled deterministically into `src/app/00_data.generated.js`, which is then bundled into the standalone artifact with the remaining source modules.
+
 ## Oxygen transport
 
 Fluorinated oil remains the dominant reversible oxygen reservoir. Cells are the irreversible oxygen sink.

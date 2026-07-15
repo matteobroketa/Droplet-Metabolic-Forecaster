@@ -4,12 +4,14 @@
   "version": "18.0.0",
   "description": "Standalone audited droplet metabolic forecaster",
   "scripts": {
+    "build:data": "node scripts/build_model_data_bundle.js",
     "build:provenance": "node scripts/build_parameter_provenance.js",
     "check:syntax": "node scripts/check_syntax.js",
     "test": "node tests/audit_regression.js",
     "test:browser": "node tests/browser_release.mjs",
     "build": "node scripts/build.js",
     "verify:artifact": "node scripts/verify_artifact.js",
+    "verify:data": "node scripts/verify_model_data_bundle.js",
     "verify:manifest": "node scripts/verify_manifest.js",
     "verify:provenance": "node scripts/verify_parameter_provenance.js"
   },

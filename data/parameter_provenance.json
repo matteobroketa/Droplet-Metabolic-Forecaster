@@ -1,7 +1,15 @@
 {
   "schemaVersion": 1,
   "generatedFrom": {
-    "sourceFile": "src/app/00_model_and_solver.js",
+    "sourceFile": "src/data/*.json",
+    "sourceFiles": [
+      "src/data/cell_lines.json",
+      "src/data/cell_line_aliases.json",
+      "src/data/cell_line_normalizations.json",
+      "src/data/media.json",
+      "src/data/oils.json",
+      "src/data/refs.json"
+    ],
     "generator": "scripts/build_parameter_provenance.js"
   },
   "requiredFields": [
@@ -15,7 +23,6 @@
     "confidenceTier",
     "notes"
   ],
-  "cellDatabaseIssues": [],
   "cellLines": {
     "hek293": {
       "entityType": "cellLine",

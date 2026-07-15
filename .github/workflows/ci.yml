@@ -19,6 +19,8 @@ jobs:
         run: npm ci
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
+      - name: Verify model data bundle
+        run: npm run verify:data
       - name: Check JavaScript syntax
         run: npm run check:syntax
       - name: Run Node regression suite

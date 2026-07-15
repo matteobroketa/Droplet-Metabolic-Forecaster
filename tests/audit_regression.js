@@ -9,14 +9,53 @@ const limitations = fs.readFileSync(path.join(__dirname, '..', 'ACCURACY_AND_LIM
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
 const ciWorkflow = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'ci.yml'), 'utf8');
 const parameterProvenance = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'parameter_provenance.json'), 'utf8'));
+const generatedDataBundle = fs.readFileSync(path.join(__dirname, '..', 'src', 'app', '00_data.generated.js'), 'utf8');
 const manifest = loadManifest(path.join(__dirname, '..'));
 const { buildParameterProvenance } = require('../scripts/parameter_provenance_utils');
+const { loadSourceData, renderModelDataBundle } = require('../scripts/source_data_utils');
 const start = html.indexOf('const DATA=');
 const end = html.indexOf("window.addEventListener('resize'");
 if (start < 0 || end < 0) throw new Error('Could not locate model code in HTML source.');
+const modelPrelude = `
+const __fallbackDocument={currentScript:null,querySelector:()=>null,querySelectorAll:()=>[],getElementById:()=>null,body:{dataset:{}},createElement:()=>({}),documentElement:{dataset:{}}};
+const __fallbackWindow={addEventListener(){}};
+const __fallbackNavigator={};
+const __fallbackLocalStorage={getItem(){return null},setItem(){},removeItem(){}};
+const __fallbackLocation={reload(){}};
+const __fallbackURL={createObjectURL(){return ''},revokeObjectURL(){}};
+const __docTarget=()=>globalThis.document||__fallbackDocument;
+const __winTarget=()=>globalThis.window||__fallbackWindow;
+const document=new Proxy({},{
+  get(_target,prop){
+    const value=__docTarget()[prop];
+    return typeof value==='function'?value.bind(__docTarget()):value;
+  },
+  set(_target,prop,value){
+    __docTarget()[prop]=value;
+    return true;
+  }
+});
+const window=new Proxy({},{
+  get(_target,prop){
+    const value=__winTarget()[prop];
+    return typeof value==='function'?value.bind(__winTarget()):value;
+  },
+  set(_target,prop,value){
+    __winTarget()[prop]=value;
+    return true;
+  }
+});
+const navigator=globalThis.navigator||__fallbackNavigator;
+const localStorage=globalThis.localStorage||__fallbackLocalStorage;
+const location=globalThis.location||__fallbackLocation;
+const print=()=>{};
+const URL=globalThis.URL||__fallbackURL;
+const Blob=globalThis.Blob||function(){};
+`;
 
 const model = new Function(
-  html.slice(start, end) +
+  modelPrelude +
+    html.slice(start, end) +
     '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, carbonateConstants, carbonateSpecies, solveCarbonateState, boundaryEquilibriumPH, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, parseCalibrationSeries, runCalibrationFit, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec, buildRateScenarioResults, buildExportPayload};'
 )();
 
@@ -447,6 +486,7 @@ run('CI workflow keeps the audited syntax, test, build, and clean-tree gates', (
   assert.strictEqual(packageJson.scripts['check:syntax'], 'node scripts/check_syntax.js', 'package syntax-check script is missing or changed');
   const requiredWorkflowFragments = [
     'npm ci',
+    'npm run verify:data',
     'npm run check:syntax',
     'npm test',
     'npm run test:browser',
@@ -459,6 +499,15 @@ run('CI workflow keeps the audited syntax, test, build, and clean-tree gates', (
   for (const fragment of requiredWorkflowFragments) {
     assert(ciWorkflow.includes(fragment), `CI workflow is missing required gate: ${fragment}`);
   }
+});
+
+run('generated model data bundle matches source JSON catalogs', () => {
+  const { DATA: sourceData } = loadSourceData(path.join(__dirname, '..'));
+  assert.deepStrictEqual(Object.keys(sourceData.cellLines).sort(), Object.keys(DATA.cellLines).sort(), 'runtime cell-line keys should match source JSON');
+  assert.deepStrictEqual(Object.keys(sourceData.media).sort(), Object.keys(DATA.media).sort(), 'runtime medium keys should match source JSON');
+  assert.deepStrictEqual(Object.keys(sourceData.oils).sort(), Object.keys(DATA.oils).sort(), 'runtime oil keys should match source JSON');
+  assert.deepStrictEqual(sourceData.refs, DATA.refs, 'runtime reference rows should match source JSON');
+  assert.strictEqual(generatedDataBundle, renderModelDataBundle(path.join(__dirname, '..')), 'generated model data bundle should exactly match the source JSON catalogs');
 });
 
 run('parameter provenance matches current source data and covers all cell/media/oil entities', () => {
