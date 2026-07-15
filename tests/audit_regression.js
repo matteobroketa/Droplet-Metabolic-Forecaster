@@ -6,6 +6,8 @@ const { loadManifest, renderArtifact } = require('../scripts/release_utils');
 const html = fs.readFileSync(path.join(__dirname, '..', 'metabolic_depletion_forecaster.html'), 'utf8');
 const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
 const limitations = fs.readFileSync(path.join(__dirname, '..', 'ACCURACY_AND_LIMITATIONS.md'), 'utf8');
+const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
+const ciWorkflow = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'ci.yml'), 'utf8');
 const manifest = loadManifest(path.join(__dirname, '..'));
 const start = html.indexOf('const DATA=');
 const end = html.indexOf("window.addEventListener('resize'");
@@ -437,6 +439,23 @@ run('artifact render assembles src/app modules and clears the script placeholder
   assert(appSourceFiles.includes('src/app/10_ui_and_exports.js'), 'artifact render should include UI/export source module');
   assert(renderedHtml.includes('function captureRawInputs(){'), 'assembled artifact should include UI/export script content');
   assert(!renderedHtml.includes('__ARTIFACT_APP_SCRIPT__'), 'assembled artifact should not keep the script placeholder');
+});
+
+run('CI workflow keeps the audited syntax, test, build, and clean-tree gates', () => {
+  assert.strictEqual(packageJson.scripts['check:syntax'], 'node scripts/check_syntax.js', 'package syntax-check script is missing or changed');
+  const requiredWorkflowFragments = [
+    'npm ci',
+    'npm run check:syntax',
+    'npm test',
+    'npm run test:browser',
+    'npm run build',
+    'npm run verify:artifact',
+    'npm run verify:manifest',
+    'git diff --exit-code',
+  ];
+  for (const fragment of requiredWorkflowFragments) {
+    assert(ciWorkflow.includes(fragment), `CI workflow is missing required gate: ${fragment}`);
+  }
 });
 
 run('closed oxygen mass conserved without cells', () => {

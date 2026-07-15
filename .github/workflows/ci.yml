@@ -8,15 +8,28 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm install
-      - run: npx playwright install --with-deps chromium
-      - run: npm test
-      - run: npm run test:browser
-      - run: npm run build
-      - run: npm run verify:artifact
-      - run: npm run verify:manifest
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+      - name: Check JavaScript syntax
+        run: npm run check:syntax
+      - name: Run Node regression suite
+        run: npm test
+      - name: Run browser verification
+        run: npm run test:browser
+      - name: Rebuild standalone artifact
+        run: npm run build
+      - name: Verify release artifact
+        run: npm run verify:artifact
+      - name: Verify audit manifest
+        run: npm run verify:manifest
+      - name: Require clean tracked tree after rebuild
+        run: git diff --exit-code

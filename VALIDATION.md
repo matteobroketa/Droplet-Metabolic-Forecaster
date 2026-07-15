@@ -7,10 +7,11 @@ Release: `v18-transport-20260715`
 Primary regression command:
 
 ```bash
+node scripts/check_syntax.js
 node tests/audit_regression.js
 ```
 
-Current minimum enforced checks: `66`
+Current minimum enforced checks: `67`
 
 The regression suite covers:
 
@@ -39,6 +40,7 @@ The regression suite covers:
 - database integrity checks
 - solver-budget protection
 - deterministic artifact assembly from the source template plus ordered `src/app` modules
+- CI workflow enforcement of syntax, regression, browser, build, manifest, and clean-rebuild gates
 
 ## Browser smoke coverage
 

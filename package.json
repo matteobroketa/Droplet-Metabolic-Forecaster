@@ -4,6 +4,7 @@
   "version": "18.0.0",
   "description": "Standalone audited droplet metabolic forecaster",
   "scripts": {
+    "check:syntax": "node scripts/check_syntax.js",
     "test": "node tests/audit_regression.js",
     "test:browser": "node tests/browser_release.mjs",
     "build": "node scripts/build.js",

@@ -32,12 +32,15 @@ The committed standalone artifact is generated deterministically from `src/stand
 Run regression checks with:
 
 ```bash
+npm run check:syntax
 npm test
 npm run test:browser
 npm run build
 npm run verify:artifact
 npm run verify:manifest
 ```
+
+CI runs the same gate set on every push and pull request, and also fails if rebuilding the standalone artifact leaves tracked files dirty.
 
 Supporting audit docs:
 
