@@ -1,11 +1,12 @@
 <!doctype html>
-<!-- artifact-name: metabolic_depletion_forecaster_v17_audit.html; release: v17-audit-20260715 -->
+<!-- artifact-name: metabolic_depletion_forecaster_v18_transport.html; release: v18-transport-20260715 -->
 <html lang="en" data-theme="light">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Metabolic Depletion Forecaster v17</title>
-<meta name="artifact-release" content="v17-audit-20260715" />
+<title>Metabolic Depletion Forecaster v18</title>
+<meta name="artifact-release" content="v18-transport-20260715" />
+<meta name="artifact-commit" content="see AUDIT_MANIFEST.json" />
 <meta name="description" content="Forecast oxygen, nutrient, and pH limits in droplet emulsions and small-volume cultures." />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%232563eb'/%3E%3Cstop offset='1' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='%2308111f'/%3E%3Ccircle cx='24' cy='32' r='12' fill='url(%23g)'/%3E%3Ccircle cx='42' cy='25' r='7' fill='%238b5cf6'/%3E%3Ccircle cx='42' cy='41' r='5' fill='%2306b6d4'/%3E%3Cpath d='M15 50c10-8 27-8 38 0' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' opacity='.9'/%3E%3C/svg%3E" />
 <style>
@@ -14,7 +15,7 @@
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:radial-gradient(900px 520px at 9% -10%,rgba(37,99,235,.20),transparent 62%),radial-gradient(820px 530px at 88% 4%,rgba(6,182,212,.17),transparent 60%),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;min-height:100vh}button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}button:disabled{cursor:not-allowed;opacity:.6}.mono,.num{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}.app{max-width:1480px;margin:0 auto;padding:26px 18px 36px}.hero{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:start;margin-bottom:20px;padding:24px;border:1px solid var(--line);background:linear-gradient(135deg,var(--card),rgba(255,255,255,.60));box-shadow:var(--shadow);border-radius:calc(var(--r) + 8px);backdrop-filter:blur(18px)}[data-theme="dark"] .hero{background:linear-gradient(135deg,var(--card),rgba(15,23,42,.55))}.badge{display:inline-flex;align-items:center;gap:8px;border:1px solid rgba(37,99,235,.22);background:rgba(37,99,235,.08);color:var(--a);padding:7px 10px;border-radius:999px;font-size:12px;font-weight:850;letter-spacing:.08em;text-transform:uppercase}.badge .dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,var(--a),var(--b));box-shadow:0 0 0 5px rgba(37,99,235,.12)}h1{font-size:clamp(30px,4vw,54px);line-height:1.02;margin:13px 0 10px;letter-spacing:-.05em}.lead{max-width:930px;margin:0;color:var(--muted);font-size:16px;line-height:1.62}.actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}.btn{border:1px solid var(--line);background:var(--solid);border-radius:14px;padding:10px 13px;font-weight:850;box-shadow:0 8px 20px rgba(15,23,42,.06)}.btn:hover{transform:translateY(-1px);border-color:rgba(37,99,235,.35)}.btn.primary{background:linear-gradient(135deg,var(--a),var(--b));color:white;border-color:transparent}.btn.ghost{background:transparent}.btn.slim{padding:7px 10px;border-radius:12px;font-size:12px}.btn.warn{border-color:rgba(217,119,6,.35);color:var(--warn);background:rgba(217,119,6,.08)}.layout{display:grid;grid-template-columns:minmax(0,1fr) 430px;gap:20px}.panel,.side-card,.dialog-card{border:1px solid var(--line);background:var(--card);box-shadow:var(--shadow);border-radius:var(--r);backdrop-filter:blur(16px)}.panel{overflow:hidden}.side{position:sticky;top:16px;align-self:start;display:grid;gap:16px}.tabs{display:flex;gap:8px;padding:12px;border-bottom:1px solid var(--line);background:rgba(148,163,184,.08);overflow:auto}.tab{white-space:nowrap;border:1px solid transparent;background:transparent;color:var(--muted);border-radius:14px;padding:10px 12px;font-weight:900}.tab.active{background:var(--solid);color:var(--text);border-color:var(--line);box-shadow:0 8px 18px rgba(15,23,42,.05)}.tab-content{display:none;padding:20px}.tab-content.active{display:block}.section-title{display:flex;align-items:end;justify-content:space-between;gap:16px;margin-bottom:16px}.section-title h2{margin:0;font-size:23px;letter-spacing:-.03em}.section-title p{margin:4px 0 0;color:var(--muted);font-size:14px;line-height:1.45}.grid{display:grid;gap:14px}.grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}.grid.four{grid-template-columns:repeat(4,minmax(0,1fr))}.field{padding:14px;border:1px solid var(--line);border-radius:18px;background:rgba(255,255,255,.45)}[data-theme="dark"] .field{background:rgba(15,23,42,.38)}.field label{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;line-height:1.25;color:var(--muted);font-weight:900;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}.field small{display:block;color:var(--muted);line-height:1.35;margin-top:7px}.value-chip{font-size:12px;color:var(--text);border:1px solid var(--line);background:var(--soft);padding:5px 8px;border-radius:999px;text-transform:none;letter-spacing:0}.input,select,textarea{width:100%;border:1px solid var(--line);background:var(--solid);border-radius:14px;padding:11px 12px;outline:none}.input:focus,select:focus,textarea:focus{box-shadow:var(--focus);border-color:rgba(37,99,235,.55)}input[type="range"]{width:100%;accent-color:var(--a)}.inline{display:flex;gap:10px;align-items:center}.inline .input{flex:1}.seg{display:flex;gap:6px;background:var(--soft);border:1px solid var(--line);border-radius:16px;padding:5px;flex-wrap:wrap}.seg label{margin:0;text-transform:none;letter-spacing:0;font-size:13px;color:var(--muted);font-weight:800;cursor:pointer}.seg input{display:none}.seg span{display:block;padding:9px 11px;border-radius:12px}.seg input:checked+span{background:var(--solid);color:var(--text);box-shadow:0 7px 16px rgba(15,23,42,.06)}.hidden{display:none!important}.preset-row{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}.notice{border:1px solid var(--line);background:var(--soft);border-radius:18px;padding:13px 14px;color:var(--muted);line-height:1.45}.notice strong{color:var(--text)}.notice.warn{background:rgba(217,119,6,.10);border-color:rgba(217,119,6,.30)}.notice.danger{background:rgba(220,38,38,.10);border-color:rgba(220,38,38,.30)}.notice.ok{background:rgba(22,163,74,.10);border-color:rgba(22,163,74,.30)}.confidence-banner{margin:-8px 0 20px;padding:11px 14px;font-size:13px}.confidence-banner .confidence-title{display:block;color:var(--text);font-weight:950;margin-bottom:2px}.confidence-banner .confidence-detail{color:var(--muted)}.additives{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.additive{display:grid;grid-template-columns:auto 1fr 96px;gap:10px;align-items:center;padding:11px;border:1px solid var(--line);border-radius:16px;background:rgba(148,163,184,.07)}.additive input[type="checkbox"]{width:18px;height:18px;accent-color:var(--a)}.additive .name{font-weight:850;font-size:13px}.additive .meta{color:var(--muted);font-size:12px;margin-top:2px}.additive input[type="number"]{padding:8px;border-radius:12px}.side-card{padding:16px}.chart-wrap{position:relative;height:310px;border:1px solid var(--line);background:var(--solid);border-radius:20px;overflow:hidden}.chart-wrap canvas{width:100%;height:100%;display:block}.tip{position:absolute;pointer-events:none;z-index:4;transform:translate(10px,-50%);background:var(--solid);border:1px solid var(--line);border-radius:14px;padding:9px 10px;box-shadow:0 16px 32px rgba(15,23,42,.16);font-size:12px;display:none;min-width:220px}.tip b{display:block;margin-bottom:3px}.legend{display:flex;gap:9px;flex-wrap:wrap;margin:11px 0 0;color:var(--muted);font-size:12px}.legend span{display:inline-flex;align-items:center;gap:6px}.swatch{width:10px;height:3px;border-radius:999px;background:var(--a)}.safe{display:grid;gap:12px}.safe .kicker{font-size:12px;font-weight:950;letter-spacing:.08em;color:var(--muted);text-transform:uppercase}.safe-time{font-size:42px;line-height:1;font-weight:950;letter-spacing:-.05em}.bar{height:14px;border-radius:999px;background:var(--soft);overflow:hidden;border:1px solid var(--line)}.bar i{display:block;height:100%;width:0;background:var(--ok);border-radius:inherit;transition:width .3s ease}.limit{display:flex;justify-content:space-between;gap:10px;border-top:1px solid var(--line);padding-top:10px;color:var(--muted);font-size:13px}.limit b{color:var(--text)}.events{display:grid;gap:7px}.event-row{display:flex;justify-content:space-between;gap:10px;color:var(--muted);font-size:13px}.event-row b{color:var(--text)}.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.metric{border:1px solid var(--line);background:var(--solid);border-radius:18px;padding:12px}.metric .label{color:var(--muted);font-size:11px;text-transform:uppercase;font-weight:950;letter-spacing:.07em}.metric .val{font-size:20px;font-weight:950;margin-top:4px;letter-spacing:-.03em}.metric small{color:var(--muted)}.table-wrap{max-height:370px;overflow:auto;border:1px solid var(--line);border-radius:18px;background:var(--solid)}table{border-collapse:collapse;width:100%;font-size:12px}th,td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th:first-child,td:first-child{text-align:left}th{position:sticky;top:0;background:var(--solid);z-index:1;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.06em}.status-ok{color:var(--ok);font-weight:900}.status-warn{color:var(--warn);font-weight:900}.status-danger{color:var(--danger);font-weight:900}.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.ref-table td,.ref-table th{text-align:left;vertical-align:top;white-space:normal}.gas-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.gas-card{border:1px solid var(--line);background:var(--solid);border-radius:18px;padding:12px}.gas-card .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:950}.gas-card .val{font-size:19px;font-weight:950;margin-top:6px}.flux{height:24px;border:1px solid var(--line);border-radius:999px;background:var(--soft);position:relative;overflow:hidden}.flux i{position:absolute;top:0;bottom:0;border-radius:999px}.flux .in{left:50%;background:rgba(22,163,74,.72)}.flux .out{right:50%;background:rgba(220,38,38,.72)}.subtle{color:var(--muted);font-size:13px;line-height:1.45}.dialog{position:fixed;inset:0;background:rgba(2,6,23,.58);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}.dialog.open{display:flex}.dialog-card{width:min(820px,100%);max-height:86vh;overflow:auto;padding:22px}.dialog h2{margin:0 0 8px}.dialog ul{line-height:1.7;color:var(--muted)}.close-x{float:right}.quality{display:grid;gap:8px;margin-top:10px}.quality .notice{padding:10px 12px;font-size:13px}.calc-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}.calc-row .btn.primary{min-width:170px}.chips{display:flex;gap:8px;flex-wrap:wrap}.chip{display:inline-flex;align-items:center;gap:7px;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:6px 9px;font-size:12px;font-weight:850;color:var(--muted)}.chip.ok{color:var(--ok);background:rgba(22,163,74,.1)}.chip.warn{color:var(--warn);background:rgba(217,119,6,.1)}.chip.danger{color:var(--danger);background:rgba(220,38,38,.1)}.model-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.model-box{border:1px solid var(--line);background:var(--solid);border-radius:18px;padding:12px}.model-box .top{font-size:11px;color:var(--muted);text-transform:uppercase;font-weight:950;letter-spacing:.06em}.model-box .big{font-size:18px;font-weight:950;margin-top:4px}.footer-note{margin:18px 3px 0;color:var(--muted);font-size:12px;line-height:1.45}@media(max-width:1120px){.layout{grid-template-columns:1fr}.side{position:static}.hero{grid-template-columns:1fr}.actions{justify-content:flex-start}.gas-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.app{padding:14px 10px 28px}.hero{padding:18px}.tab-content{padding:14px}.grid.two,.grid.three,.grid.four,.additives,.model-grid{grid-template-columns:1fr}.metrics{grid-template-columns:1fr}.additive{grid-template-columns:auto 1fr 88px}.safe-time{font-size:34px}.chart-wrap{height:260px}.gas-grid{grid-template-columns:1fr}}@media(print){body{background:white}.actions,.tabs,.toolbar,.btn,.dialog{display:none!important}.layout{grid-template-columns:1fr}.side{position:static}.panel,.side-card,.hero{box-shadow:none;background:white}}
 </style>
 </head>
-<body data-release="v17-audit-20260715">
+<body data-release="v18-transport-20260715">
 <div class="app">
   <header class="hero">
     <div>
@@ -423,7 +424,7 @@ const VESSELS={
   ptfe_600:{id:'ptfe_600',name:'600 µm ID PTFE tubing',kind:'tubing',diameter_mm:0.6,length_mm:1000,storageMode:'ptfe_tubing'},
   custom:{id:'custom',name:'custom geometry',kind:'custom',capacity_uL:null,diameter_mm:null,storageMode:null}
 };
-const STATE_KEY='metabolic-forecaster-v17-audit-20260715';
+const STATE_KEY='metabolic-forecaster-v18-transport-20260715';
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
 const clamp=(x,a,b)=>Math.min(b,Math.max(a,x));
 const fmt=(x,d=3)=>Number.isFinite(x)?Number(x).toLocaleString(undefined,{maximumFractionDigits:d,minimumFractionDigits:0}):'—';
@@ -435,7 +436,29 @@ function gasPreset(){const id=$('#headspaceGas').value; if(id==='air')return {na
 function vaporAtm(T){const es_hPa=6.1094*Math.exp(17.625*T/(T+243.04)); return clamp(es_hPa/1013.25,0,.2);}
 function o2Eq(T,gas){const kh=PHYS.kH_O2_37C_mM_atm*Math.exp(-.025*(T-37)); return Math.max(0,kh*gas.o2*(1-vaporAtm(T))*1000);}
 function co2Eq(T,gas){const kh=PHYS.kH_CO2_37C_mM_atm*Math.exp(-.025*(T-37)); return Math.max(.001,kh*gas.co2*(1-vaporAtm(T)));}
-function kFromHalf(half){return Math.log(2)/Math.max(.05,half);}
+function sanitizeHalf(half){return Math.max(.05,Number.isFinite(half)?half:.05);}
+function kFromHalf(half){return Math.log(2)/sanitizeHalf(half);}
+function effectiveHalfTime(half,scale=1,mode='reference_scaled'){const base=sanitizeHalf(half), safeScale=Math.max(1e-9,Number.isFinite(scale)?scale:1); return mode==='measured_effective'?base:base/safeScale;}
+function finitePairConductance(half,capA,capB){if(!(capA>0)||!(capB>0))return 0; return kFromHalf(half)*(capA*capB)/(capA+capB);}
+function boundaryConductance(half,cap){return cap>0?kFromHalf(half)*cap:0;}
+function integerLike(v){return Number.isFinite(v)&&Math.abs(v-Math.round(v))<=1e-9;}
+function activeNumericInputIds(){
+  const ids=new Set(['temperature','totalEmulsion','aqueousFraction','residualOil','gasHalf','oilHalf','dropHalf','maxDays','logStep','initAqO2Pct','initOilO2Pct','initReservoirO2Pct','initHeadspaceO2Pct','initHeadspaceCO2Pct','glucoseFloor','glutamineFloor','doublingTime','lagPhase','carryingCapacity','o2Km','pasteurThreshold','pasteurMax','targetCells','hypoxiaPct','lambda','pH0','pHFloor','pHCeiling','headspaceVolume','vesselDiameter','tubingLength','surfaceAccess','gradientFactor','centerPenalty','decimals','marginWarning','warburgOverride','volumeT']);
+  if($('#headspaceGas')?.value==='custom'){ids.add('customO2'); ids.add('customCO2');}
+  if($('#cellLine')?.value==='custom')['customOCR','customGCR','customLPR','customGlnCR'].forEach(id=>ids.add(id));
+  if($('#medium')?.value==='custom_medium')['customGlucose','customGln','customBicarb','customBuffer'].forEach(id=>ids.add(id));
+  ['ocrOverride','gcrOverride','lprOverride','glnOverride'].forEach(id=>{if(String(document.getElementById(id)?.value??'').trim()!=='')ids.add(id);});
+  const vesselPreset=$('#vesselPreset')?.value||'custom';
+  if(vesselPreset!=='custom')ids.delete('headspaceVolume');
+  if(vesselPreset!=='custom'&&vesselPreset!=='ptfe_600'){ids.delete('vesselDiameter'); ids.delete('tubingLength');}
+  if(vesselPreset==='ptfe_600')ids.add('vesselDiameter');
+  return ids;
+}
+function configCompatibilityIssues(p){
+  const issues=[];
+  if(p&&p.pHBoundaryMode==='closed_headspace_mass_balance'&&p.atmMode!=='closed')issues.push('Finite headspace CO₂ mass balance requires a closed gas boundary. Change the gas mode to closed or select an external CO₂ boundary.');
+  return issues;
+}
 
 function hardValidateInputs(p){
   const invalid=p.invalid||(p.invalid=[]);
@@ -485,6 +508,10 @@ function hardValidateInputs(p){
   const pH0=check('pH0','Starting pH');
   const pHFloor=check('pHFloor','pH floor');
   const pHCeil=check('pHCeiling','pH ceiling');
+  const targetCellsValue=num('targetCells');
+  const decimalsValue=num('decimals');
+  if(Number.isFinite(targetCellsValue)&&!integerLike(targetCellsValue))add('Evaluated droplet cell count must be an integer.');
+  if(Number.isFinite(decimalsValue)&&!integerLike(decimalsValue))add('Decimals must be an integer.');
   if(Number.isFinite(pHFloor)&&Number.isFinite(pHCeil)&&!(pHFloor<pHCeil))add('pH floor must be lower than pH ceiling.');
   if(Number.isFinite(pH0)&&Number.isFinite(pHFloor)&&Number.isFinite(pHCeil)&&(pH0<pHFloor||pH0>pHCeil))add('Starting pH is outside the configured viability interval; adjust starting pH or the pH limits before calculating.');
   if(el('headspaceGas')?.value==='custom'){
@@ -533,7 +560,10 @@ function hardValidateInputs(p){
     if(vessel.id!=='custom'&&Number.isFinite(cap)&&p.liquidFill_uL>cap+1e-9)add(`Liquid fill ${fmt(p.liquidFill_uL/1000,3)} mL exceeds ${vessel.name} capacity ${fmt(cap/1000,3)} mL.`);
   }
   if(p&&Number.isFinite(p.Vaq_uL)&&Number.isFinite(p.volume_nL)&&p.Vaq_uL*1000+1e-9<p.volume_nL)add('Total aqueous volume must be at least one target-droplet volume.');
+  configCompatibilityIssues(p).forEach(add);
+  const activeIds=activeNumericInputIds();
   document.querySelectorAll('input[type="number"],input[type="range"]').forEach(node=>{
+    if(node.id&&!activeIds.has(node.id))return;
     const value=String(node.value??'').trim();
     if(value==='')return;
     const label=(document.querySelector(`label[for="${node.id}"]`)?.textContent||node.id).replace(/\s+/g,' ').trim();
@@ -632,9 +662,8 @@ function buildOccupancyModel(lambda,N,targetCells){
 function bulkCellsAt(occupancy,t,p){return (occupancy?.classes||[]).reduce((sum,c)=>sum+c.count*cellsAt(c.k,t,p,p.volume_nL),0);}
 function bulkGroupCellsAt(occupancy,t,p){
   const singleDroplets=Math.max(0,occupancy?.singleDroplets||0);
-  const multiDroplets=Math.max(0,occupancy?.multiDroplets||0);
   const single=singleDroplets>0?singleDroplets*cellsAt(1,t,p,p.volume_nL):0;
-  const multi=multiDroplets>0?multiDroplets*cellsAt(Math.max(1,occupancy?.meanMultiSeedCells||1),t,p,p.volume_nL):0;
+  const multi=(occupancy?.classes||[]).reduce((sum,c)=>c.k>=2?sum+c.count*cellsAt(c.k,t,p,p.volume_nL):sum,0);
   return {single,multi,total:single+multi};
 }
 function oxygenLimitedRate(cellCount,o2,p){if(cellCount<=0||p.rates.ocr<=0)return 0; const km=Math.max(1e-6,p.o2Km_uM||1); const c=Math.max(0,o2); return cellCount*p.rates.ocr*c/(km+c);}
@@ -750,7 +779,7 @@ function gatherParams(){
   if(headspace_mL<0)headspace_mL=0;
 
   const targetCellsInput=Number($('#targetCells').value);
-  const targetCells=Number.isFinite(targetCellsInput)?Math.round(targetCellsInput):1;
+  const targetCells=Number.isFinite(targetCellsInput)?targetCellsInput:1;
   const lambdaInput=Number($('#lambda').value);
   const lambda=Number.isFinite(lambdaInput)?lambdaInput:0;
   const targetProbability=poissonPMF(targetCells,lambda);
@@ -779,8 +808,8 @@ function gatherParams(){
     initReservoirO2Pct:clamp((Number.isFinite(Number($('#initReservoirO2Pct')?.value))?Number($('#initReservoirO2Pct')?.value):100),0,300),
     glucoseFloor:Math.max(0,(Number.isFinite(Number($('#glucoseFloor')?.value))?Number($('#glucoseFloor')?.value):0.1)),
     glutamineFloor:Math.max(0,(Number.isFinite(Number($('#glutamineFloor')?.value))?Number($('#glutamineFloor')?.value):0.05)),
-    prolif:$('#proliferation').value==='on',dt_h:Number.isFinite(Number($('#doublingTime').value))?Math.max(.1,Number($('#doublingTime').value)):(cell.dt||24),lag_h:Number.isFinite(Number($('#lagPhase').value))?Math.max(0,Number($('#lagPhase').value)):(cell.lag||0),
-    logStep:Math.max(1,Number($('#logStep').value)||30),maxDays:Math.max(.25,Number($('#maxDays').value)||14),decimals:clamp(Number($('#decimals').value)||4,2,12),
+    prolif:$('#proliferation').value==='on',dt_h:Number.isFinite(Number($('#doublingTime').value))?Number($('#doublingTime').value):(cell.dt||24),lag_h:Number.isFinite(Number($('#lagPhase').value))?Number($('#lagPhase').value):(cell.lag||0),
+    logStep:Number.isFinite(Number($('#logStep').value))?Number($('#logStep').value):30,maxDays:Number.isFinite(Number($('#maxDays').value))?Number($('#maxDays').value):14,decimals:Number.isFinite(Number($('#decimals').value))?Number($('#decimals').value):4,
     marginWarning:Number($('#marginWarning').value)||12,carryingCellsPerNL:Math.max(1,Number($('#carryingCapacity')?.value)||300),
     pasteurThreshold_uM:Number.isFinite(Number($('#pasteurThreshold')?.value))?Math.max(0,Number($('#pasteurThreshold')?.value)):20,pasteurMax:clamp(Number($('#pasteurMax')?.value)||1.8,1,5),
     o2Km_uM:Math.max(1e-6,Number($('#o2Km')?.value)||1),rq:Math.max(0,cell.rq||1),estimatedWorkload:null
@@ -799,7 +828,7 @@ function gatherParams(){
   if(residualOil_uL>totalEmulsion_uL)warn('warn','Excess reservoir oil is larger than the generated droplet emulsion. This is valid for an oil overlay or loop, but if you meant a single total-liquid volume, set excess oil to 0 and use aqueous fraction to define the oil inside the emulsion.');
   if(p.gas.o2>.15&&p.gas.co2<.005&&p.sub.bicarb>5&&p.pHBoundaryMode!=='fixed_starting_pH_boundary')warn('warn','Ambient-air boundary with bicarbonate medium can drive strong pH drift when the selected-gas CO₂ boundary is active. Use 5% CO₂/air for bicarbonate-buffered incubations unless ambient exposure is intentional.');
   if(p.sub.bicarb>5&&p.pHBoundaryMode==='fixed_starting_pH_boundary')warn('warn','Bicarbonate pH is using an explicit infinite CO₂ reservoir matched to the starting pH. This is not a closed-system carbon balance.');
-  if(p.pHBoundaryMode==='closed_headspace_mass_balance'&&p.atmMode!=='closed')warn('warn','Finite headspace CO₂ mass balance requires a closed gas boundary. With incubator mode selected, the CO₂ boundary is replenished instead.');
+  configCompatibilityIssues(p).forEach(text=>warn('danger',text));
   if(p.atmMode==='closed'&&p.headspace_mL<=1e-9)warn('warn','Closed mode has zero headspace volume, so gas exchange with a headspace compartment is disabled.');
   if(p.targetCells>p.carryingCellsPerNL*p.volume_nL)warn('warn','Initial target-cell count exceeds the proliferation carrying-capacity estimate for this droplet volume.');
   if(p.targetProbability<0.001)warn('warn',`The evaluated droplet occupancy is very rare under λ: P(K=${p.targetCells}) = ${fmt(p.targetProbability*100,4)}%. Treat this as a stress-test droplet, not a representative droplet.`);
@@ -866,16 +895,38 @@ function bulkCountsForMode(p,mode,t=0){
   if(mode==='shared_mean_field')return {single:0,multi:grouped.total,total:grouped.total};
   return grouped;
 }
+function localDepletionTime(cap,cellCount,p){
+  if(!(cap>0)||!(cellCount>0)||!(p.rates.ocr>0))return Infinity;
+  const compareO2=Math.max(1e-6,Math.min(Math.max(0,p.initialO2B||0),Math.max(1e-6,p.o2Km_uM||1)));
+  const rate=oxygenLimitedRate(cellCount,compareO2,p);
+  return rate>0?cap*compareO2/rate:Infinity;
+}
+function bulkRegimeSampleTimes(p){
+  const horizon=Math.max(0,(p.maxDays||0)*24*60);
+  if(!(horizon>0)||!p.prolif)return [0];
+  const samples=[0];
+  if(p.lag_h>0)samples.push(p.lag_h*60);
+  for(let i=1;i<=8;i++)samples.push(horizon*i/8);
+  return [...new Set(samples.filter(t=>Number.isFinite(t)&&t>=0&&t<=horizon))].sort((a,b)=>a-b);
+}
 function bulkDepletionTimes(p,baseCaps){
-  const grouped=bulkGroupCellsAt(p.occupancy,0,p);
-  const singleRate=oxygenLimitedRate(grouped.single,p.initialO2B,p);
-  const multiRate=oxygenLimitedRate(grouped.multi,p.initialO2B,p);
-  const singleMin=baseCaps.capSingle>0&&singleRate>0?baseCaps.capSingle*Math.max(0,p.initialO2B)/singleRate:Infinity;
-  const multiMin=baseCaps.capMulti>0&&multiRate>0?baseCaps.capMulti*Math.max(0,p.initialO2B)/multiRate:Infinity;
-  return {singleMin,multiMin,minDepletionMin:Math.min(singleMin,multiMin)};
+  const best={singleMin:Infinity,multiMin:Infinity,minDepletionMin:Infinity,sampledTimeMin:0,evaluationSamples:0};
+  for(const t of bulkRegimeSampleTimes(p)){
+    const grouped=bulkGroupCellsAt(p.occupancy,t,p);
+    const singleMin=localDepletionTime(baseCaps.capSingle,grouped.single,p);
+    const multiMin=localDepletionTime(baseCaps.capMulti,grouped.multi,p);
+    best.singleMin=Math.min(best.singleMin,singleMin);
+    best.multiMin=Math.min(best.multiMin,multiMin);
+    if(Math.min(singleMin,multiMin)<best.minDepletionMin){
+      best.minDepletionMin=Math.min(singleMin,multiMin);
+      best.sampledTimeMin=t;
+    }
+    best.evaluationSamples+=1;
+  }
+  return best;
 }
 function resolveBulkOxygenRegime(p,effectiveDropBulkHalf=null,baseCaps=occupancyCapacities(p)){
-  const exchangeHalfMin=effectiveDropBulkHalf??halfFromK(kFromHalf(p.dropHalf)*geometryScales(p).dropBulk);
+  const exchangeHalfMin=effectiveDropBulkHalf??effectiveHalfTime(p.dropHalf,geometryScales(p).dropBulk,p.halfTimeMode);
   const depletion=bulkDepletionTimes(p,baseCaps);
   const transportLimited=Number.isFinite(depletion.minDepletionMin)&&depletion.minDepletionMin<=exchangeHalfMin*2;
   let selectedMode=p.bulkO2Mode||'auto';
@@ -886,50 +937,107 @@ function bulkCapacitiesForMode(baseCaps,mode){
   if(mode==='shared_mean_field')return {capEmpty:0,capSingle:0,capMulti:baseCaps.capBulk,capBulk:baseCaps.capBulk,capBulkOccupied:baseCaps.capBulk,bulkO2Mode:mode};
   return {...baseCaps,bulkO2Mode:mode};
 }
+function conductanceRate(G,cap){return cap>0?G/cap:0;}
+function buildKinetics(p,caps,geom,headCapO2=headspaceCapacityO2(p.headspace_mL,p.T),headCapCO2=headspaceCapacityCO2(p.headspace_mL,p.T)){
+  const gasResHalf=effectiveHalfTime(p.gasHalf,geom.gasRes,p.halfTimeMode);
+  const gasDirectHalf=effectiveHalfTime(p.gasHalf,geom.gasDirect,p.halfTimeMode);
+  const oilHalf=effectiveHalfTime(p.oilHalf,geom.oilMix,p.halfTimeMode);
+  const dropTargetHalf=effectiveHalfTime(p.dropHalf,geom.dropTarget,p.halfTimeMode);
+  const dropBulkHalf=effectiveHalfTime(p.dropHalf,geom.dropBulk,p.halfTimeMode);
+  const co2TargetHalf=sanitizeHalf(dropTargetHalf/2.2);
+  const co2BulkHalf=sanitizeHalf(dropBulkHalf/2.2);
+  const finiteHeadO2=p.atmMode==='closed'&&headCapO2>1e-9;
+  const finiteHeadCO2=p.atmMode==='closed'&&p.pHBoundaryMode==='closed_headspace_mass_balance'&&headCapCO2>1e-9;
+  return {
+    gasResHalf,gasDirectHalf,oilHalf,dropTargetHalf,dropBulkHalf,co2TargetHalf,co2BulkHalf,
+    GgasRes:finiteHeadO2?finitePairConductance(gasResHalf,caps.capOilR,headCapO2):boundaryConductance(gasResHalf,caps.capOilR),
+    GgasDirect:finiteHeadO2?finitePairConductance(gasDirectHalf,caps.capOilE*p.surfaceAccess,headCapO2):boundaryConductance(gasDirectHalf,caps.capOilE*p.surfaceAccess),
+    Goil:finitePairConductance(oilHalf,caps.capOilR,caps.capOilE),
+    GdropTarget:finitePairConductance(dropTargetHalf,caps.capT,caps.capOilE),
+    GdropEmpty:finitePairConductance(dropBulkHalf,caps.capEmpty,caps.capOilE),
+    GdropSingle:finitePairConductance(dropBulkHalf,caps.capSingle,caps.capOilE),
+    GdropMulti:finitePairConductance(dropBulkHalf,caps.capMulti,caps.capOilE),
+    Gco2Target:finiteHeadCO2?finitePairConductance(co2TargetHalf,caps.capT*1000,headCapCO2):boundaryConductance(co2TargetHalf,caps.capT*1000),
+    Gco2Empty:finiteHeadCO2?finitePairConductance(co2BulkHalf,caps.capEmpty*1000,headCapCO2):boundaryConductance(co2BulkHalf,caps.capEmpty*1000),
+    Gco2Single:finiteHeadCO2?finitePairConductance(co2BulkHalf,caps.capSingle*1000,headCapCO2):boundaryConductance(co2BulkHalf,caps.capSingle*1000),
+    Gco2Multi:finiteHeadCO2?finitePairConductance(co2BulkHalf,caps.capMulti*1000,headCapCO2):boundaryConductance(co2BulkHalf,caps.capMulti*1000),
+    finiteHeadO2,finiteHeadCO2,headCapO2,headCapCO2
+  };
+}
 function estimateSolverWorkload(p){
   const baseDt=Math.max(0.0005,Number.isFinite(p.maxStepMin)?p.maxStepMin:0.5);
-  const caps=occupancyCapacities(p);
-  const capT=Math.max(1e-9,p.volume_nL);
-  const capOilE=Math.max(0,p.VoilEmul_uL*1000*p.oil.capacityRatio);
-  const capOilR=Math.max(0,p.residualOil_uL*1000*p.oil.capacityRatio);
-  const geom=geometryScales(p);
-  const kgBase=kFromHalf(p.gasHalf), koBase=kFromHalf(p.oilHalf), kdBase=kFromHalf(p.dropHalf);
-  const hasHeadspace=p.atmMode!=='closed'||p.headspace_mL>1e-9;
-  const kgRes=hasHeadspace?kgBase*geom.gasRes:0, kgDirect=hasHeadspace?kgBase*geom.gasDirect:0, ko=koBase*geom.oilMix, kdT=kdBase*geom.dropTarget, kdB=kdBase*geom.dropBulk;
-  const oilReservoirRate=capOilR>0?ko*capOilE/capOilR:0;
-  const headCapO2=headspaceCapacityO2(p.headspace_mL,p.T);
-  const headCapCO2=headspaceCapacityCO2(p.headspace_mL,p.T);
-  const closedGasRateO2=p.atmMode==='closed'&&headCapO2>0?Math.max(kgRes*capOilR/headCapO2,kgDirect*capOilE*p.surfaceAccess/headCapO2):0;
-  const closedGasRateCO2=p.atmMode==='closed'&&headCapCO2>0?Math.max(kdT*capT*1000/headCapCO2,kdB*Math.max(caps.capSingle,caps.capMulti,caps.capEmpty)*1000/headCapCO2):0;
-  const kMax=Math.max(kgRes,kgDirect,ko,oilReservoirRate,kdT,kdB,closedGasRateO2,closedGasRateCO2,1e-9);
+  const baseBulkCaps=occupancyCapacities(p);
+  const bulkRegime=resolveBulkOxygenRegime(p,null,baseBulkCaps);
+  const bulkCaps=bulkCapacitiesForMode(baseBulkCaps,bulkRegime.selectedMode);
+  const caps={capT:Math.max(1e-9,p.volume_nL),capOilE:Math.max(0,p.VoilEmul_uL*1000*p.oil.capacityRatio),capOilR:Math.max(0,p.residualOil_uL*1000*p.oil.capacityRatio),...bulkCaps};
+  const kin=buildKinetics(p,caps,geometryScales(p));
+  const kMax=Math.max(
+    conductanceRate(kin.GgasRes,caps.capOilR),conductanceRate(kin.GgasDirect,caps.capOilE),conductanceRate(kin.Goil,caps.capOilE),conductanceRate(kin.Goil,caps.capOilR),
+    conductanceRate(kin.GdropTarget,caps.capT),conductanceRate(kin.GdropTarget,caps.capOilE),conductanceRate(kin.GdropEmpty,caps.capEmpty),conductanceRate(kin.GdropSingle,caps.capSingle),conductanceRate(kin.GdropMulti,caps.capMulti),
+    kin.finiteHeadO2?conductanceRate(kin.GgasRes,kin.headCapO2):0,kin.finiteHeadO2?conductanceRate(kin.GgasDirect,kin.headCapO2):0,
+    kin.finiteHeadCO2?conductanceRate(kin.Gco2Target,kin.headCapCO2):0,kin.finiteHeadCO2?conductanceRate(kin.Gco2Multi,kin.headCapCO2):0,1e-9
+  );
   const stableDtEstimate=Math.min(baseDt,Math.max(0.0005,0.2/kMax));
-  const estimatedSteps=Math.ceil((p.maxDays*24*60)/Math.max(0.0005,stableDtEstimate));
+  const estimatedSteps=Math.ceil((Math.max(.001,p.maxDays)*24*60)/Math.max(0.0005,stableDtEstimate));
   return {stableDtEstimate,estimatedSteps,kMax};
 }
+function solveDenseLinearSystem(matrix,rhs){
+  const a=matrix.map((row,i)=>[...row,rhs[i]]);
+  for(let col=0;col<a.length;col++){
+    let pivot=col;
+    for(let row=col+1;row<a.length;row++)if(Math.abs(a[row][col])>Math.abs(a[pivot][col]))pivot=row;
+    if(Math.abs(a[pivot][col])<1e-15)continue;
+    if(pivot!==col)[a[col],a[pivot]]=[a[pivot],a[col]];
+    const div=a[col][col];
+    for(let j=col;j<=a.length;j++)a[col][j]/=div;
+    for(let row=0;row<a.length;row++){
+      if(row===col)continue;
+      const factor=a[row][col];
+      if(Math.abs(factor)<1e-15)continue;
+      for(let j=col;j<=a.length;j++)a[row][j]-=factor*a[col][j];
+    }
+  }
+  return a.map(row=>row[a.length]);
+}
+function solveLinearExchange(nodes,finiteEdges,boundaryEdges,dt){
+  if(!nodes.length)return {};
+  const idx=new Map(nodes.map((node,i)=>[node.key,i]));
+  const mat=nodes.map((_,i)=>nodes.map((__,j)=>i===j?1:0));
+  const rhs=nodes.map(node=>node.amount);
+  for(const edge of finiteEdges){
+    if(!(edge.G>0))continue;
+    const ia=idx.get(edge.a), ib=idx.get(edge.b);
+    const capA=nodes[ia].cap, capB=nodes[ib].cap;
+    if(!(capA>0)||!(capB>0))continue;
+    mat[ia][ia]+=dt*edge.G/capA;
+    mat[ib][ib]+=dt*edge.G/capB;
+    mat[ia][ib]-=dt*edge.G/capB;
+    mat[ib][ia]-=dt*edge.G/capA;
+  }
+  for(const edge of boundaryEdges){
+    if(!(edge.G>0))continue;
+    const i=idx.get(edge.node), cap=nodes[i].cap;
+    if(!(cap>0))continue;
+    mat[i][i]+=dt*edge.G/cap;
+    rhs[i]+=dt*edge.G*edge.conc;
+  }
+  const solved=solveDenseLinearSystem(mat,rhs);
+  return Object.fromEntries(nodes.map((node,i)=>[node.key,solved[i]>-1e-9?Math.max(0,solved[i]):solved[i]]));
+}
 const Engine={simulate(p){
-  const baseDt=Math.max(0.0005,Number.isFinite(p.maxStepMin)?p.maxStepMin:0.5),maxMin=p.maxDays*24*60,chartEvery=5;
+  const baseDt=Math.max(0.0005,Number.isFinite(p.maxStepMin)?p.maxStepMin:0.5),maxMin=Math.max(.001,p.maxDays)*24*60,chartEvery=5;
   const capT=Math.max(1e-9,p.volume_nL);
   const baseBulkCaps=occupancyCapacities(p);
+  const bulkRegime=resolveBulkOxygenRegime(p,null,baseBulkCaps);
+  const bulkCaps=bulkCapacitiesForMode(baseBulkCaps,bulkRegime.selectedMode);
   const capOilE=Math.max(0,p.VoilEmul_uL*1000*p.oil.capacityRatio);
   const capOilR=Math.max(0,p.residualOil_uL*1000*p.oil.capacityRatio);
-  const geom=geometryScales(p);
-  const kgBase=kFromHalf(p.gasHalf), koBase=kFromHalf(p.oilHalf), kdBase=kFromHalf(p.dropHalf);
-  const hasHeadspace=p.atmMode!=='closed'||p.headspace_mL>1e-9;
-  const kgResRaw=kgBase*geom.gasRes, kgDirectRaw=kgBase*geom.gasDirect, ko=koBase*geom.oilMix, kdT=kdBase*geom.dropTarget, kdB=kdBase*geom.dropBulk;
-  const kgRes=hasHeadspace?kgResRaw:0, kgDirect=hasHeadspace?kgDirectRaw:0;
-  const kco2T=(hasHeadspace||p.atmMode!=='closed')?kdT*2.2:0, kco2B=(hasHeadspace||p.atmMode!=='closed')?kdB*2.2:0;
-  const oilReservoirRate=capOilR>0?ko*capOilE/capOilR:0;
-  const headCapO2=headspaceCapacityO2(p.headspace_mL,p.T);
-  const headCapCO2=headspaceCapacityCO2(p.headspace_mL,p.T);
-  const closedGasRateO2=p.atmMode==='closed'&&headCapO2>0?Math.max(kgRes*capOilR/headCapO2,kgDirect*capOilE*p.surfaceAccess/headCapO2):0;
-  const bulkRegime=resolveBulkOxygenRegime(p,halfFromK(kdB),baseBulkCaps);
-  const bulkCaps=bulkCapacitiesForMode(baseBulkCaps,bulkRegime.selectedMode);
   const capBulk=bulkCaps.capBulk;
-  const closedGasRateCO2=p.atmMode==='closed'&&headCapCO2>0?Math.max(kco2T*capT*1000/headCapCO2,kco2B*Math.max(bulkCaps.capEmpty,bulkCaps.capSingle,bulkCaps.capMulti)*1000/headCapCO2):0;
-  const kMax=Math.max(kgRes,kgDirect,ko,oilReservoirRate,kdT,kdB,kco2T,kco2B,closedGasRateO2,closedGasRateCO2,1e-9);
-  const stableDt=Math.min(baseDt,Math.max(0.0005,0.2/kMax));
-  const kinetics={kgRes,kgDirect,ko,kdT,kdB,kco2T,kco2B,trackHeadCO2:p.atmMode==='closed'&&p.pHBoundaryMode==='closed_headspace_mass_balance'&&p.headspace_mL>1e-9};
   const caps={capT,capBulk,capOilE,capOilR,...bulkCaps};
+  const geom=geometryScales(p);
+  const kinetics=buildKinetics(p,caps,geom);
+  const estimate=p.estimatedWorkload||estimateSolverWorkload(p);
+  const stableDt=Math.min(baseDt,Math.max(0.0005,estimate.stableDtEstimate||baseDt));
   const stepBudget=Number.isFinite(p.maxAcceptedSteps)?Math.max(1,Math.round(p.maxAcceptedSteps)):300000;
   const rootBudget=Number.isFinite(p.maxRootIterations)?Math.max(1,Math.round(p.maxRootIterations)):20000;
   let s={
@@ -961,7 +1069,7 @@ const Engine={simulate(p){
   s.nBulk=initialBulkCounts.total;
   refreshState(s,caps,p);
   const O2total0=s.mO2T+s.mO2Empty+s.mO2Single+s.mO2Multi+s.mO2Oil+s.mO2Res+(p.atmMode==='closed'?s.headO2:0);
-  const CO2tracked0=s.mCO2T+s.mCO2Empty+s.mCO2Single+s.mCO2Multi+(p.atmMode==='closed'?s.headCO2:0);
+  const CO2tracked0=s.mCO2T+s.mCO2Empty+s.mCO2Single+s.mCO2Multi+(kinetics.finiteHeadCO2?s.headCO2:0);
   let o2Consumed=0,co2Produced=0;
   let chart=[],log=[],nextC=0,nextL=0,events={O2:null,Glucose:null,Glutamine:null,pH_floor:null,pH_ceiling:null};
   let limiter='simulation horizon',safeMin=maxMin;
@@ -1014,21 +1122,20 @@ const Engine={simulate(p){
   const O2totalFinal=final.mO2T+final.mO2Empty+final.mO2Single+final.mO2Multi+final.mO2Oil+final.mO2Res+(p.atmMode==='closed'?final.headO2:0);
   const o2Residual=p.atmMode==='closed'?O2total0-O2totalFinal-o2Consumed:null;
   const o2ResidualPct=p.atmMode==='closed'?100*Math.abs(o2Residual)/Math.max(1,Math.abs(O2total0)):0;
-  const CO2trackedFinal=final.mCO2T+final.mCO2Empty+final.mCO2Single+final.mCO2Multi+(p.atmMode==='closed'?final.headCO2:0);
-  const co2Residual=p.atmMode==='closed'?CO2tracked0+co2Produced-CO2trackedFinal:null;
-  const co2ResidualPct=p.atmMode==='closed'?100*Math.abs(co2Residual)/Math.max(1,Math.abs(CO2tracked0+co2Produced)):0;
-  const effective={gasResHalf:halfFromK(kgRes),gasDirectHalf:halfFromK(kgDirect),oilHalf:halfFromK(ko),dropTargetHalf:halfFromK(kdT),dropBulkHalf:halfFromK(kdB),co2TargetHalf:halfFromK(kco2T),subDt:stableDt};
-  const closedCarbonBalance=kinetics.trackHeadCO2;
+  const CO2trackedFinal=final.mCO2T+final.mCO2Empty+final.mCO2Single+final.mCO2Multi+(kinetics.finiteHeadCO2?final.headCO2:0);
+  const co2Residual=kinetics.finiteHeadCO2?CO2tracked0+co2Produced-CO2trackedFinal:null;
+  const co2ResidualPct=kinetics.finiteHeadCO2?100*Math.abs(co2Residual)/Math.max(1,Math.abs(CO2tracked0+co2Produced)):null;
+  const effective={gasResHalf:kinetics.gasResHalf,gasDirectHalf:kinetics.gasDirectHalf,oilHalf:kinetics.oilHalf,dropTargetHalf:kinetics.dropTargetHalf,dropBulkHalf:kinetics.dropBulkHalf,co2TargetHalf:kinetics.co2TargetHalf,subDt:stableDt};
   const sortedDt=[...dtHistory].sort((a,b)=>a-b);
   const actualMinStep=sortedDt.length?sortedDt[0]:0;
   const actualMedianStep=sortedDt.length?sortedDt[Math.floor(sortedDt.length/2)]:0;
   const actualMaxStep=sortedDt.length?sortedDt[sortedDt.length-1]:0;
   return {
     params:p,chart,log,events,limiter,safeMin,final,error:solverError,
-    capacities:{capT,capBulk,capBulkOccupied:bulkCaps.capBulkOccupied,capEmpty:bulkCaps.capEmpty,capSingle:bulkCaps.capSingle,capMulti:bulkCaps.capMulti,capOilE,capOilR,capHead:headCapO2,capHeadCO2:headCapCO2},
-    mass:{O2total0,O2totalFinal,o2Consumed,o2Residual,o2ResidualPct,CO2tracked0,CO2trackedFinal,co2Produced,co2Residual:closedCarbonBalance?co2Residual:null,co2ResidualPct:closedCarbonBalance?co2ResidualPct:null,closedCarbonBalance},
+    capacities:{capT,capBulk,capBulkOccupied:bulkCaps.capBulkOccupied,capEmpty:bulkCaps.capEmpty,capSingle:bulkCaps.capSingle,capMulti:bulkCaps.capMulti,capOilE,capOilR,capHead:kinetics.headCapO2,capHeadCO2:kinetics.headCapCO2},
+    mass:{O2total0,O2totalFinal,o2Consumed,o2Residual,o2ResidualPct,CO2tracked0,CO2trackedFinal,co2Produced,co2Residual,co2ResidualPct,closedCarbonBalance:kinetics.finiteHeadCO2},
     geometry:geom,effective,bulkO2Regime:bulkRegime,
-    solver:{acceptedSteps,rejectedTrials,rootIterations,estimatedSteps:p.estimatedWorkload?.estimatedSteps||0,stableDtEstimate:p.estimatedWorkload?.stableDtEstimate||stableDt,actualMinStep,actualMedianStep,actualMaxStep,stepBudget,rootBudget},
+    solver:{acceptedSteps,rejectedTrials,rootIterations,estimatedSteps:estimate.estimatedSteps||0,stableDtEstimate:estimate.stableDtEstimate||stableDt,actualMinStep,actualMedianStep,actualMaxStep,stepBudget,rootBudget},
     initialFlux:initialFlux(p,capT,capBulk,capOilE,capOilR,geom)
   };
 }};
@@ -1053,21 +1160,17 @@ function advanceStep(prev,dt,p,caps,kin){
   s.nSingle=grouped.single;
   s.nMulti=grouped.multi;
   s.nBulk=grouped.total;
-  const Ceq=headEq(s,p);
-  const dGasRes=caps.capOilR>0?limitedExchange(kin.kgRes,caps.capOilR,Ceq,s.O2Res,p.atmMode==='closed'?s.headO2:Infinity,s.mO2Res,dt):0;
-  s.mO2Res+=dGasRes; if(p.atmMode==='closed')s.headO2-=dGasRes;
-  const dGasDirect=caps.capOilE>0?limitedExchange(kin.kgDirect,caps.capOilE*p.surfaceAccess,Ceq,s.O2Oil,p.atmMode==='closed'?s.headO2:Infinity,s.mO2Oil,dt):0;
-  s.mO2Oil+=dGasDirect; if(p.atmMode==='closed')s.headO2-=dGasDirect;
-  const dOil=caps.capOilR>0&&caps.capOilE>0?limitedExchange(kin.ko,caps.capOilE,s.O2Res,s.O2Oil,s.mO2Res,s.mO2Oil,dt):0;
-  s.mO2Oil+=dOil; s.mO2Res-=dOil;
-  const dTarget=limitedExchange(kin.kdT,caps.capT,s.O2Oil,s.O2T,s.mO2Oil,s.mO2T,dt);
-  s.mO2T+=dTarget; s.mO2Oil-=dTarget;
-  const dEmpty=caps.capEmpty>0?limitedExchange(kin.kdB,caps.capEmpty,s.O2Oil,s.O2Empty,s.mO2Oil,s.mO2Empty,dt):0;
-  s.mO2Empty+=dEmpty; s.mO2Oil-=dEmpty;
-  const dSingle=caps.capSingle>0?limitedExchange(kin.kdB,caps.capSingle,s.O2Oil,s.O2Single,s.mO2Oil,s.mO2Single,dt):0;
-  s.mO2Single+=dSingle; s.mO2Oil-=dSingle;
-  const dMulti=caps.capMulti>0?limitedExchange(kin.kdB,caps.capMulti,s.O2Oil,s.O2Multi,s.mO2Oil,s.mO2Multi,dt):0;
-  s.mO2Multi+=dMulti; s.mO2Oil-=dMulti;
+  const o2Nodes=[{key:'mO2T',amount:s.mO2T,cap:caps.capT},{key:'mO2Empty',amount:s.mO2Empty,cap:caps.capEmpty},{key:'mO2Single',amount:s.mO2Single,cap:caps.capSingle},{key:'mO2Multi',amount:s.mO2Multi,cap:caps.capMulti},{key:'mO2Oil',amount:s.mO2Oil,cap:caps.capOilE},{key:'mO2Res',amount:s.mO2Res,cap:caps.capOilR},...(kin.finiteHeadO2?[{key:'headO2',amount:s.headO2,cap:kin.headCapO2}]:[])];
+  const o2Finite=[{a:'mO2Res',b:'mO2Oil',G:kin.Goil},{a:'mO2Oil',b:'mO2T',G:kin.GdropTarget},{a:'mO2Oil',b:'mO2Empty',G:kin.GdropEmpty},{a:'mO2Oil',b:'mO2Single',G:kin.GdropSingle},{a:'mO2Oil',b:'mO2Multi',G:kin.GdropMulti},...(kin.finiteHeadO2?[{a:'mO2Res',b:'headO2',G:kin.GgasRes},{a:'mO2Oil',b:'headO2',G:kin.GgasDirect}]:[])];
+  const o2Boundary=kin.finiteHeadO2?[]:[{node:'mO2Res',G:kin.GgasRes,conc:headEq(s,p)},{node:'mO2Oil',G:kin.GgasDirect,conc:headEq(s,p)}];
+  const solvedO2=solveLinearExchange(o2Nodes,o2Finite,o2Boundary,dt);
+  s.mO2T=solvedO2.mO2T??s.mO2T;
+  s.mO2Empty=solvedO2.mO2Empty??s.mO2Empty;
+  s.mO2Single=solvedO2.mO2Single??s.mO2Single;
+  s.mO2Multi=solvedO2.mO2Multi??s.mO2Multi;
+  s.mO2Oil=solvedO2.mO2Oil??s.mO2Oil;
+  s.mO2Res=solvedO2.mO2Res??s.mO2Res;
+  if(kin.finiteHeadO2)s.headO2=solvedO2.headO2??s.headO2;
   refreshState(s,caps,p);
   const consAmtT=Math.min(oxygenLimitedRate(s.nT,s.O2T,p)*dt,Math.max(0,s.mO2T));
   const consAmtSingle=Math.min(oxygenLimitedRate(s.nSingle,s.O2Single,p)*dt,Math.max(0,s.mO2Single));
@@ -1088,17 +1191,15 @@ function advanceStep(prev,dt,p,caps,kin){
   s.mCO2Single+=co2ProdSingle;
   s.mCO2Multi+=co2ProdMulti;
   refreshState(s,caps,p);
-  const CO2Boundary=co2HeadEq(s,p);
-  const co2Dest=kin.trackHeadCO2?s.headCO2:Infinity;
-  const dCO2T=limitedExchange(kin.kco2T,caps.capT*1000,s.CO2T,CO2Boundary,s.mCO2T,co2Dest,dt);
-  s.mCO2T-=dCO2T; if(kin.trackHeadCO2)s.headCO2+=dCO2T;
-  const co2BulkDest=()=>kin.trackHeadCO2?s.headCO2:Infinity;
-  const dCO2Empty=caps.capEmpty>0?limitedExchange(kin.kco2B,caps.capEmpty*1000,s.CO2Empty,CO2Boundary,s.mCO2Empty,co2BulkDest(),dt):0;
-  s.mCO2Empty-=dCO2Empty; if(kin.trackHeadCO2)s.headCO2+=dCO2Empty;
-  const dCO2Single=caps.capSingle>0?limitedExchange(kin.kco2B,caps.capSingle*1000,s.CO2Single,CO2Boundary,s.mCO2Single,co2BulkDest(),dt):0;
-  s.mCO2Single-=dCO2Single; if(kin.trackHeadCO2)s.headCO2+=dCO2Single;
-  const dCO2Multi=caps.capMulti>0?limitedExchange(kin.kco2B,caps.capMulti*1000,s.CO2Multi,CO2Boundary,s.mCO2Multi,co2BulkDest(),dt):0;
-  s.mCO2Multi-=dCO2Multi; if(kin.trackHeadCO2)s.headCO2+=dCO2Multi;
+  const co2Nodes=[{key:'mCO2T',amount:s.mCO2T,cap:caps.capT*1000},{key:'mCO2Empty',amount:s.mCO2Empty,cap:caps.capEmpty*1000},{key:'mCO2Single',amount:s.mCO2Single,cap:caps.capSingle*1000},{key:'mCO2Multi',amount:s.mCO2Multi,cap:caps.capMulti*1000},...(kin.finiteHeadCO2?[{key:'headCO2',amount:s.headCO2,cap:kin.headCapCO2}]:[])];
+  const co2Finite=kin.finiteHeadCO2?[{a:'mCO2T',b:'headCO2',G:kin.Gco2Target},{a:'mCO2Empty',b:'headCO2',G:kin.Gco2Empty},{a:'mCO2Single',b:'headCO2',G:kin.Gco2Single},{a:'mCO2Multi',b:'headCO2',G:kin.Gco2Multi}]:[];
+  const co2Boundary=kin.finiteHeadCO2?[]:[{node:'mCO2T',G:kin.Gco2Target,conc:co2HeadEq(s,p)},{node:'mCO2Empty',G:kin.Gco2Empty,conc:co2HeadEq(s,p)},{node:'mCO2Single',G:kin.Gco2Single,conc:co2HeadEq(s,p)},{node:'mCO2Multi',G:kin.Gco2Multi,conc:co2HeadEq(s,p)}];
+  const solvedCO2=solveLinearExchange(co2Nodes,co2Finite,co2Boundary,dt);
+  s.mCO2T=solvedCO2.mCO2T??s.mCO2T;
+  s.mCO2Empty=solvedCO2.mCO2Empty??s.mCO2Empty;
+  s.mCO2Single=solvedCO2.mCO2Single??s.mCO2Single;
+  s.mCO2Multi=solvedCO2.mCO2Multi??s.mCO2Multi;
+  if(kin.finiteHeadCO2)s.headCO2=solvedCO2.headCO2??s.headCO2;
   s.t=prev.t+dt;
   refreshState(s,caps,p);
   s.nT=cellsAt(p.targetCells,s.t,p,caps.capT);
@@ -1108,7 +1209,6 @@ function advanceStep(prev,dt,p,caps,kin){
   s.nBulk=groupedNext.total;
   return {state:s,o2Consumed:consAmtT+consAmtSingle+consAmtMulti,co2Produced:co2ProdT+co2ProdSingle+co2ProdMulti,raw:{Glc:glcRaw,Gln:glnRaw}};
 }
-function limitedExchange(k,effectiveCap,sourceConc,destConc,sourceAmount,destAmount,dt){if(!(k>0)||!(effectiveCap>0))return 0; const raw=k*effectiveCap*(sourceConc-destConc)*dt; if(raw>=0)return Math.min(raw,Math.max(0,sourceAmount)); return -Math.min(-raw,Math.max(0,destAmount));}
 function refreshState(s,caps,p){
   s.mO2B=s.mO2Empty+s.mO2Single+s.mO2Multi;
   s.mCO2B=s.mCO2Empty+s.mCO2Single+s.mCO2Multi;
@@ -1171,7 +1271,7 @@ function co2HeadEq(s,p){if(p.pHBoundaryMode==='closed_headspace_mass_balance'&&p
 function computePH(s,p){const dL=Math.max(0,s.Lac-p.sub.lac), co2=Math.max(.001,s.CO2T||p.CO2Initial||p.CO2eq), co20=Math.max(.001,p.CO2Initial||p.CO2eq); const b0=Math.max(0,p.sub.bicarb||0), pKa=6.103; if(b0>.5){const b=Math.max(.05,b0-dL); const hh0=pKa+Math.log10(Math.max(.05,b0)/co20); const hh=pKa+Math.log10(b/co2); const nonBicarbDrop=dL/Math.max(2,p.buffer*2.5); return clamp(p.pH0+(hh-hh0)-.20*nonBicarbDrop,0,14);} const lactateDrop=dL/Math.max(.1,p.buffer); const co2Drop=Math.log10(co2/co20); return clamp(p.pH0-lactateDrop-co2Drop,0,14);}
 function status(s,p){if(s.O2T<=p.o2Threshold)return 'Hypoxia'; if(s.Glc<=p.glucoseFloor)return 'Glucose depleted'; if(s.Gln<=p.glutamineFloor)return 'Glutamine depleted'; if(s.pH<=p.pHFloor)return 'Acidic'; if(s.pH>=p.pHCeiling)return 'Alkaline'; return 'Viable';}
 function halfFromK(k){return k>0?Math.log(2)/k:Infinity;}
-function initialFlux(p,capT,capBulk,capOilE,capOilR,geom=geometryScales(p)){const kgBase=kFromHalf(p.gasHalf),koBase=kFromHalf(p.oilHalf),kdBase=kFromHalf(p.dropHalf); const kgRes=(p.atmMode!=='closed'||p.headspace_mL>1e-9)?kgBase*geom.gasRes:0,kgDirect=(p.atmMode!=='closed'||p.headspace_mL>1e-9)?kgBase*geom.gasDirect:0,ko=koBase*geom.oilMix,kdT=kdBase*geom.dropTarget,kdB=kdBase*geom.dropBulk; const baseBulkCaps=occupancyCapacities(p); const bulkRegime=resolveBulkOxygenRegime(p,halfFromK(kdB),baseBulkCaps); const bulkCaps=bulkCapacitiesForMode(baseBulkCaps,bulkRegime.selectedMode); const initHeadEq=headEq({headO2:p.headO2Initial},p); const grouped=bulkCountsForMode(p,bulkRegime.selectedMode,0); const demand=oxygenLimitedRate(p.targetCells,p.initialO2T,p)+oxygenLimitedRate(grouped.single,p.initialO2B,p)+oxygenLimitedRate(grouped.multi,p.initialO2B,p); const boundaryRes=capOilR>0?kgRes*capOilR*(initHeadEq-p.initialO2Res):0; const boundaryDirect=capOilE>0?kgDirect*capOilE*p.surfaceAccess*(initHeadEq-p.initialO2Oil):0; const localTarget=kdT*capT*(p.initialO2Oil-p.initialO2T); const localSingle=bulkCaps.capSingle>0?kdB*bulkCaps.capSingle*(p.initialO2Oil-p.initialO2B):0; const localMulti=bulkCaps.capMulti>0?kdB*bulkCaps.capMulti*(p.initialO2Oil-p.initialO2B):0; const localEmpty=bulkCaps.capEmpty>0?kdB*bulkCaps.capEmpty*(p.initialO2Oil-p.initialO2B):0; const mix=capOilR>0&&capOilE>0?ko*capOilE*(p.initialO2Res-p.initialO2Oil):0; return {demand,boundaryNet:boundaryRes+boundaryDirect,boundaryIntoLiquid:Math.max(0,boundaryRes)+Math.max(0,boundaryDirect),boundaryOutOfLiquid:Math.max(0,-boundaryRes)+Math.max(0,-boundaryDirect),localNet:localTarget+localSingle+localMulti,localIntoDroplets:Math.max(0,localTarget)+Math.max(0,localSingle)+Math.max(0,localMulti),localOutOfDroplets:Math.max(0,-localTarget)+Math.max(0,-localSingle)+Math.max(0,-localMulti),localIntoEmptyDroplets:Math.max(0,localEmpty),localOutOfEmptyDroplets:Math.max(0,-localEmpty),mix,bulkO2Regime:bulkRegime};}
+function initialFlux(p,capT,capBulk,capOilE,capOilR,geom=geometryScales(p)){const baseBulkCaps=occupancyCapacities(p); const bulkRegime=resolveBulkOxygenRegime(p,effectiveHalfTime(p.dropHalf,geom.dropBulk,p.halfTimeMode),baseBulkCaps); const bulkCaps=bulkCapacitiesForMode(baseBulkCaps,bulkRegime.selectedMode); const kin=buildKinetics(p,{capT,capBulk,capOilE,capOilR,...bulkCaps},geom); const initHeadEq=headEq({headO2:p.headO2Initial},p); const grouped=bulkCountsForMode(p,bulkRegime.selectedMode,0); const demand=oxygenLimitedRate(p.targetCells,p.initialO2T,p)+oxygenLimitedRate(grouped.single,p.initialO2B,p)+oxygenLimitedRate(grouped.multi,p.initialO2B,p); const boundaryRes=capOilR>0?kin.GgasRes*(initHeadEq-p.initialO2Res):0; const boundaryDirect=capOilE>0?kin.GgasDirect*(initHeadEq-p.initialO2Oil):0; const localTarget=kin.GdropTarget*(p.initialO2Oil-p.initialO2T); const localSingle=kin.GdropSingle*(p.initialO2Oil-p.initialO2B); const localMulti=kin.GdropMulti*(p.initialO2Oil-p.initialO2B); const localEmpty=kin.GdropEmpty*(p.initialO2Oil-p.initialO2B); const mix=kin.Goil*(p.initialO2Res-p.initialO2Oil); return {demand,boundaryNet:boundaryRes+boundaryDirect,boundaryIntoLiquid:Math.max(0,boundaryRes)+Math.max(0,boundaryDirect),boundaryOutOfLiquid:Math.max(0,-boundaryRes)+Math.max(0,-boundaryDirect),localNet:localTarget+localSingle+localMulti,localIntoDroplets:Math.max(0,localTarget)+Math.max(0,localSingle)+Math.max(0,localMulti),localOutOfDroplets:Math.max(0,-localTarget)+Math.max(0,-localSingle)+Math.max(0,-localMulti),localIntoEmptyDroplets:Math.max(0,localEmpty),localOutOfEmptyDroplets:Math.max(0,-localEmpty),mix,bulkO2Regime:bulkRegime};}
 function runAndRender(){updateDynamicUI(); const p=gatherParams(); if(p.invalid&&p.invalid.length){window.lastResult=null; renderInvalid(p); saveState(); return;} const r=Engine.simulate(p); window.lastResult=r; if(r.error){renderSolverError(r); saveState(); return;} renderResult(r); drawChart(r); saveState();}
 function renderInvalid(p){$('#safeTime').textContent='Invalid'; $('#limitedBy').textContent='configuration'; $('#safeBar').style.width='100%'; $('#safeBar').style.background='var(--danger)'; $('#safeCard').style.borderColor='rgba(220,38,38,.55)'; $('#eventList').innerHTML='<div class="event-row"><span>Calculation blocked</span><b>fix inputs</b></div>'; const msgs=[...p.invalid,...p.warnings.filter(w=>w.type==='danger').map(w=>w.text)]; $('#warnings').innerHTML=[...new Set(msgs)].map(t=>`<div class="notice danger">${t}</div>`).join('') || '<div class="notice danger">Invalid configuration.</div>'; $('#metrics').innerHTML=[['Liquid fill',fmt(p.liquidFill_uL/1000,3)+' mL','generated emulsion + excess oil'],['Vessel capacity',p.vesselCapacity_uL?fmt(p.vesselCapacity_uL/1000,3)+' mL':'custom','selected vessel'],['Estimated workload',p.estimatedWorkload?fmt(p.estimatedWorkload.estimatedSteps,0)+' steps':'—','pre-run workload estimate'],['Vessel',p.vessel.name,'incubation format']].map(m=>`<div class="metric"><div class="label">${m[0]}</div><div class="val mono">${m[1]}</div><small>${m[2]}</small></div>`).join(''); $('#logTable tbody').innerHTML=`<tr><td colspan="11">${msgs[0]||'Calculation blocked.'}</td></tr>`; $('#gasCards').innerHTML=`<div class="notice danger">${msgs[0]||'Invalid configuration. No forecast was generated.'}</div>`; $('#fluxNote').textContent='Flux balance not calculated for invalid configuration.'; $('#lastRun').textContent=`Calculation blocked: ${msgs[0]||'invalid configuration'}`; const c=$('#timeline'),ctx=c.getContext('2d'),rect=c.getBoundingClientRect(),dpr=devicePixelRatio||1; c.width=Math.max(320,Math.floor(rect.width*dpr)); c.height=Math.max(220,Math.floor(rect.height*dpr)); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,rect.width,rect.height); ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--solid'); ctx.fillRect(0,0,rect.width,rect.height); ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--danger'); ctx.font='16px Inter, system-ui'; ctx.textAlign='center'; ctx.fillText('Invalid configuration — calculation blocked',rect.width/2,rect.height/2);}
 function renderSolverError(r){const p=r.params; $('#safeTime').textContent='Stopped'; $('#limitedBy').textContent='solver budget'; $('#safeBar').style.width='100%'; $('#safeBar').style.background='var(--warn)'; $('#safeCard').style.borderColor='rgba(217,119,6,.55)'; $('#eventList').innerHTML='<div class="event-row"><span>Calculation stopped</span><b>solver budget</b></div>'; $('#warnings').innerHTML=`<div class="notice warn">${r.error}</div>`; $('#metrics').innerHTML=[['Accepted steps',fmt(r.solver.acceptedSteps,0),'completed before stop'],['Root iterations',fmt(r.solver.rootIterations,0),'bracketed event refinements'],['Estimated workload',fmt(r.solver.estimatedSteps,0),'pre-run estimate'],['Min / median / max dt',`${fmt(r.solver.actualMinStep,4)} / ${fmt(r.solver.actualMedianStep,4)} / ${fmt(r.solver.actualMaxStep,4)} min`,'accepted timestep distribution']].map(m=>`<div class="metric"><div class="label">${m[0]}</div><div class="val mono">${m[1]}</div><small>${m[2]}</small></div>`).join(''); $('#gasCards').innerHTML=`<div class="notice warn">${r.error}</div>`; $('#logTable tbody').innerHTML=`<tr><td colspan="11">${r.error}</td></tr>`; $('#fluxNote').textContent='Flux balance shown below is from the initial state only.'; $('#lastRun').textContent=r.error; const c=$('#timeline'),ctx=c.getContext('2d'),rect=c.getBoundingClientRect(),dpr=devicePixelRatio||1; c.width=Math.max(320,Math.floor(rect.width*dpr)); c.height=Math.max(220,Math.floor(rect.height*dpr)); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,rect.width,rect.height); ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--solid'); ctx.fillRect(0,0,rect.width,rect.height); ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--warn'); ctx.font='16px Inter, system-ui'; ctx.textAlign='center'; ctx.fillText('Solver budget exceeded — adjust horizon or kinetics',rect.width/2,rect.height/2);}
@@ -1228,14 +1328,14 @@ function renderResult(r){
     ['Target droplet half-time',fmt(r.effective.dropTargetHalf,1)+' min'],
     ['Bulk droplet half-time',fmt(r.effective.dropBulkHalf,1)+' min'],
     ['Half-time interpretation',p.halfTimeMode.replaceAll('_',' '),'reference-scaled or directly measured'],
-    ['Bulk O₂ regime',r.bulkO2Regime.selectedMode.replaceAll('_',' '),`drop half-time ${fmt(r.bulkO2Regime.exchangeHalfMin,2)} min vs min local depletion ${Number.isFinite(r.bulkO2Regime.minDepletionMin)?fmt(r.bulkO2Regime.minDepletionMin,2):'∞'} min`],
+    ['Bulk O₂ regime',r.bulkO2Regime.selectedMode.replaceAll('_',' '),`drop half-time ${fmt(r.bulkO2Regime.exchangeHalfMin,2)} min vs sampled min local depletion ${Number.isFinite(r.bulkO2Regime.minDepletionMin)?fmt(r.bulkO2Regime.minDepletionMin,2):'∞'} min at ${fmt((r.bulkO2Regime.sampledTimeMin||0)/60,2)} h`],
     ['Rate temperature mode',p.rateTemperatureMode.replaceAll('_',' '),p.rateTemperatureMode==='reference_37c_q10'?`Q10 OCR ${fmt(p.q10Factor.ocr,3)} · GCR ${fmt(p.q10Factor.gcr,3)} · LPR ${fmt(p.q10Factor.lpr,3)} · GLN ${fmt(p.q10Factor.gln,3)}`:'no Q10 temperature scaling applied'],
     ['Geometry mode',r.geometry.notes],
     ['O₂ threshold',fmt(p.o2Threshold,3)+' µM',thresholdLabel(p)],
     ['Glucose / glutamine floors',fmt(p.glucoseFloor,3)+' / '+fmt(p.glutamineFloor,3)+' mM'],
     ['CO₂ exchange half-time',fmt(r.effective.co2TargetHalf,1)+' min'],
     ['Closed O₂ mass residual',p.atmMode==='closed'?fmt(r.mass.o2ResidualPct,4)+'%':'open boundary'],
-    ['Closed tracked CO₂ residual',r.mass.closedCarbonBalance?fmt(r.mass.co2ResidualPct,4)+'%':'not applicable',r.mass.closedCarbonBalance?'finite closed-headspace carbon balance':'external or replenished CO₂ boundary'],
+    ['Tracked aqueous + headspace CO₂ residual',r.mass.closedCarbonBalance?fmt(r.mass.co2ResidualPct,4)+'%':'not applicable',r.mass.closedCarbonBalance?'finite closed-headspace tracked-carbon balance; oil-phase CO₂ is not tracked':'external or replenished CO₂ boundary'],
     ['Estimated / actual steps',`${fmt(r.solver.estimatedSteps,0)} / ${fmt(r.solver.acceptedSteps,0)}`,'pre-run estimate vs accepted steps'],
     ['Accepted dt min / median / max',`${fmt(r.solver.actualMinStep,4)} / ${fmt(r.solver.actualMedianStep,4)} / ${fmt(r.solver.actualMaxStep,4)} min`],
     ['Root iterations',fmt(r.solver.rootIterations,0),`budget ${fmt(r.solver.rootBudget,0)}`],
@@ -1245,8 +1345,8 @@ function renderResult(r){
   const warns=[...p.warnings];
   if(horizon)warns.push({type:'ok',text:`No endpoint was reached within the ${fmt(p.maxDays,2)} day simulation horizon; the useful window is reported as ≥ horizon.`});
   if(r.effective.subDt<.05)warns.push({type:'warn',text:'Fast exchange kinetics triggered adaptive sub-stepping for numerical stability.'});
-  if(r.bulkO2Regime.selectedMode==='grouped_transport_limited')warns.push({type:'warn',text:'Bulk O₂ is using grouped empty/single/multi droplet compartments because local depletion can compete with oil-mediated equilibration. Nutrients remain mean-field across bulk droplets.'});
-  else warns.push({type:'ok',text:'Bulk O₂ is using the shared mean-field reservoir because oil-mediated equilibration is faster than local occupied-droplet depletion.'});
+  if(r.bulkO2Regime.selectedMode==='grouped_transport_limited')warns.push({type:'warn',text:'Bulk O₂ is using grouped empty/single/multi droplet compartments because sampled local depletion can compete with oil-mediated equilibration. Nutrients remain mean-field across bulk droplets.'});
+  else warns.push({type:'ok',text:'Bulk O₂ is using the shared mean-field reservoir because sampled oil-mediated equilibration is faster than local occupied-droplet depletion.'});
   if(p.prolif&&safeH>24)warns.push({type:'warn',text:'Proliferation remains a heuristic logistic model; environmental inhibition beyond O₂ limitation is not fully modeled.'});
   if(!horizon&&safeH<p.marginWarning)warns.push({type:safeH<4?'danger':'warn',text:`Useful window is below ${fmt(p.marginWarning,0)} h.`});
   if(p.atmMode==='closed'&&p.headspace_mL<.1)warns.push({type:'warn',text:'Closed headspace is very small; oxygen and CO₂ boundaries can shift rapidly.'});
@@ -1255,7 +1355,7 @@ function renderResult(r){
   if(p.emulsionDepth_mm>6&&p.storageMode==='static_tube')warns.push({type:'warn',text:'Static emulsion depth is high for the selected vessel diameter; gas-boundary exchange is likely area-limited.'});
   if(p.storageMode==='static_tube'&&p.N>1e6)warns.push({type:'warn',text:'Large static droplet populations may develop center-to-edge oxygen gradients; validate with an oxygen sensor or use circulation/thin-layer storage.'});
   if(p.atmMode==='closed'&&r.mass.o2ResidualPct>.1)warns.push({type:'warn',text:`Closed-system O₂ mass residual is ${fmt(r.mass.o2ResidualPct,3)}%; check fast exchange or solver settings.`});
-  if(r.mass.closedCarbonBalance&&r.mass.co2ResidualPct>.1)warns.push({type:'warn',text:`Closed-system tracked CO₂ residual is ${fmt(r.mass.co2ResidualPct,3)}%; check fast exchange or solver settings.`});
+  if(r.mass.closedCarbonBalance&&r.mass.co2ResidualPct>.1)warns.push({type:'warn',text:`Tracked aqueous + headspace CO₂ residual is ${fmt(r.mass.co2ResidualPct,3)}%; check fast exchange or solver settings.`});
   const uniqueWarns=[...new Map(warns.map(w=>[w.type+'|'+w.text,w])).values()];
   $('#warnings').innerHTML=uniqueWarns.map(w=>`<div class="notice ${w.type}">${w.text}</div>`).join('')||'<div class="notice ok">No major configuration warnings.</div>';
   $('#lastRun').textContent=`Updated ${new Date().toLocaleTimeString()}. ${p.cell.name}, ${fmt(p.volume_nL,3)} nL, λ ${fmt(p.lambda,2)}, ${displayH} useful window.`;
@@ -1268,7 +1368,7 @@ function loadState(){try{const data=JSON.parse(localStorage.getItem(STATE_KEY)||
 function applyPreset(id){const set=(k,v)=>{const el=document.getElementById(k); if(el)el.value=v}; if(id==='single'){set('cellLine','mcf7');set('medium','dmem_high');set('volumeT',sliderFromVol(1));set('targetCells',1);set('lambda',.1);set('totalEmulsion',0.1);set('aqueousFraction',30);set('residualOil',0.2);set('storageMode','static_tube');set('headspaceGas','co2air');set('vesselPreset','eppendorf_1_5');} if(id==='dense'){set('cellLine','mcf7');set('medium','dmem_high');set('volumeT',sliderFromVol(.17));set('targetCells',1);set('lambda',.8);set('totalEmulsion',1.0);set('aqueousFraction',55);set('residualOil',0.025);set('storageMode','static_tube');set('vesselPreset','eppendorf_1_5');} if(id==='reservoir'){set('cellLine','hek293');set('medium','dmem_high');set('volumeT',sliderFromVol(.17));set('targetCells',1);set('lambda',.2);set('totalEmulsion',1.0);set('aqueousFraction',40);set('residualOil',1.5);set('storageMode','oil_circulated');set('oilType','hfe7500');set('vesselPreset','falcon_15');} if(id==='pdms'){set('cellLine','hek293');set('medium','dmem_high');set('volumeT',sliderFromVol(1));set('targetCells',5);set('lambda',.5);set('totalEmulsion',0.02);set('aqueousFraction',25);set('residualOil',0);set('storageMode','pdms_chip');set('oilType','pdms');set('vesselPreset','custom');} if(id==='closed'){set('cellLine','jurkat');set('medium','rpmi1640');set('volumeT',sliderFromVol(1));set('targetCells',1);set('lambda',.3);set('totalEmulsion',0.5);set('aqueousFraction',40);set('residualOil',0.5);set('atmMode','closed');set('storageMode','static_tube');set('vesselPreset','eppendorf_1_5');} syncVesselControls('main'); applyVesselPreset(); updateDynamicUI(); runAndRender();}
 function toCSV(r){const header='time_h,target_o2_uM,bulk_o2_uM,emulsion_oil_o2_water_equiv_uM,reservoir_oil_o2_water_equiv_uM,glucose_mM,glutamine_mM,lactate_mM,co2_mM,pH,target_cells,bulk_cells,status\n'; return header+r.log.map(s=>[s.t/60,s.O2T,s.O2B,s.O2Oil,s.O2Res,s.Glc,s.Gln,s.Lac,s.CO2T,s.pH,s.nT,s.nBulk,s.status].join(',')).join('\n');}
 function download(name,type,content){const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
-function exportCSV(){if(window.lastResult)download('metabolic_depletion_forecaster_log.csv','text/csv',toCSV(window.lastResult))} function exportJSON(){if(window.lastResult)download('metabolic_depletion_forecaster_result.json','application/json',JSON.stringify({...window.lastResult,release:document.body.dataset.release,artifactRelease:document.querySelector('meta[name="artifact-release"]')?.content},null,2))} function downloadData(){download('metabolic_forecaster_data.json','application/json',JSON.stringify(DATA,(k,v)=>typeof v==='function'?v.toString():v,2))}
+function exportCSV(){if(window.lastResult)download('metabolic_depletion_forecaster_log.csv','text/csv',toCSV(window.lastResult))} function exportJSON(){if(window.lastResult){const artifactRelease=document.querySelector('meta[name="artifact-release"]')?.content||document.body.dataset.release; const artifactCommit=document.querySelector('meta[name="artifact-commit"]')?.content||'see AUDIT_MANIFEST.json'; download('metabolic_depletion_forecaster_result.json','application/json',JSON.stringify({...window.lastResult,release:document.body.dataset.release,artifactRelease,artifactCommit,exportedAt:new Date().toISOString(),transportModel:window.lastResult.bulkO2Regime?.selectedMode,halfTimeMode:window.lastResult.params?.halfTimeMode,rateTemperatureMode:window.lastResult.params?.rateTemperatureMode,trackedCarbonResidualApplicable:!!window.lastResult.mass?.closedCarbonBalance},null,2))}} function downloadData(){download('metabolic_forecaster_data.json','application/json',JSON.stringify(DATA,(k,v)=>typeof v==='function'?v.toString():v,2))}
 function savePNG(){const c=$('#timeline'); const out=document.createElement('canvas'); const scale=3; out.width=c.width*scale; out.height=c.height*scale; const ctx=out.getContext('2d'); ctx.imageSmoothingEnabled=true; ctx.drawImage(c,0,0,out.width,out.height); const a=document.createElement('a'); a.href=out.toDataURL('image/png'); a.download='metabolic_depletion_timeline_highres.png'; a.click();}
 function copySummary(){const r=window.lastResult;if(!r)return; const p=r.params; const h=r.limiter==='simulation horizon'?`≥ ${hoursLabel(p.maxDays*24)}`:hoursLabel(r.safeMin/60); const conf=confidenceForCell(p.cell); const txt=`Metabolic Depletion Forecaster: ${p.cell.name} in ${p.med.name}; confidence ${conf.title}; evidence ${p.cell.evidenceTier?('Tier '+p.cell.evidenceTier):'direct/default'}; target droplet ${p.targetCells} cell(s), ${p.volume_nL.toFixed(3)} nL; P(target occupancy) ${fmt(p.targetProbability*100,4)}%; emulsion λ ${p.lambda.toFixed(2)}, ${fmt(p.totalEmulsion_uL/1000,3)} mL generated emulsion, ${Math.round(100*p.Vaq_uL/p.totalEmulsion_uL)}% aqueous, ${fmt(p.residualOil_uL/1000,3)} mL excess oil, ${fmt(p.liquidFill_uL/1000,3)} mL liquid fill; ${p.gas.name}, ${p.T.toFixed(1)} °C, ${p.atmMode} headspace, ${p.storageMode}. Useful window ${h}. Limiting factor: ${r.limiter==='simulation horizon'?'none within horizon':r.limiter}. Endpoint target O₂ ${r.final.O2T.toFixed(3)} µM, CO₂ ${r.final.CO2T.toFixed(3)} mM, glucose ${r.final.Glc.toFixed(3)} mM, glutamine ${r.final.Gln.toFixed(3)} mM, pH ${r.final.pH.toFixed(3)}.`; if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).catch(()=>fallbackCopy(txt));}else fallbackCopy(txt); $('#lastRun').textContent='Summary copied.';}
 function fallbackCopy(txt){const ta=document.createElement('textarea'); ta.value=txt; ta.style.position='fixed'; ta.style.left='-9999px'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy')}catch(e){} ta.remove();}

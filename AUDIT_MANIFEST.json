@@ -1,0 +1,12 @@
+{
+  "release": "v18-transport-20260715",
+  "gitCommit": "pending-release-commit",
+  "files": {
+    "metabolic_depletion_forecaster.html": "3B0438886287F2D98F49CC524578BCE131B5772EE1B7EA45707889C1892B33D6",
+    "tests/audit_regression.js": "67E1FE2B143B6054CBDB04DC8028FB30B37896648548572F7B5198C1928D8370",
+    "README.md": "EE08CC2774526CA1DC456EA35EDD16363D6EC3C39814FE9180E9C87E8B35B2A3",
+    "ACCURACY_AND_LIMITATIONS.md": "A3893F4F8C75C9B98C7A7669A9E847B83868EB1475EDB4FD3F3263178686D2A8"
+  },
+  "testCommand": "node tests/audit_regression.js",
+  "expectedMinimumChecks": 52
+}

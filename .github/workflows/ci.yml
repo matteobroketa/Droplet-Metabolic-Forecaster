@@ -1,0 +1,22 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      - run: npm run test:browser
+      - run: npm run build
+      - run: npm run verify:artifact
+      - run: npm run verify:manifest

@@ -5,11 +5,12 @@ The Metabolic Depletion Forecaster estimates how long cells may remain in a drop
 The result should be read as a **planning estimate**, not as a guaranteed incubation limit. Real cultures vary with passage number, medium, serum, oxygen tension, pH, cell density, adaptation state, and the actual gas-exchange geometry of the device.
 
 Audited release:
-`v17-audit-20260715`
+`v18-transport-20260715`
 
 ## What is corrected in this release
 
 - Closed-headspace O₂ and tracked CO₂ are updated in conserved amounts rather than concentration clamps.
+- Finite exchange half-times now mean what the UI says: for two finite compartments, the concentration difference halves over the entered half-time, and the coupled exchange solve is simultaneous and conservative.
 - Initial aqueous, oil, reservoir, and closed-headspace oxygen states are independent of the selected boundary gas.
 - Bulk proliferation uses Poisson occupancy classes, so empty droplets do not contribute carrying capacity.
 - Droplet exchange scales with droplet size through an area-to-volume relation.
@@ -17,9 +18,9 @@ Audited release:
 - Endpoint times are interpolated within solver substeps instead of being reported only on 0.5 min boundaries.
 - Accepted partial steps now update cumulative O₂/CO₂ counters only for the accepted fraction of the step.
 - Closed zero-headspace configurations disable headspace gas exchange rather than transferring mass into a zero-volume gas compartment.
-- Closed tracked-CO₂ residuals are only meaningful in finite closed-headspace CO₂ mass-balance mode. External CO₂ reservoir modes are not treated as closed carbon balances.
+- Tracked aqueous + headspace CO₂ residuals are only meaningful in finite closed-headspace CO₂ mass-balance mode. External CO₂ reservoir modes are not treated as closed carbon balances, and oil-phase CO₂ is still outside the tracked inventory.
 - Exchange half-times can be entered either as reference values to be geometry-scaled or as measured-effective values for the exact current configuration.
-- Bulk O₂ can remain a shared mean-field reservoir when oil-mediated equilibration is fast, or switch to grouped empty/single/multi droplet pools when local depletion is transport-limited.
+- Bulk O₂ can remain a shared mean-field reservoir when sampled oil-mediated equilibration is fast, or switch to grouped empty/single/multi droplet pools when local depletion is transport-limited.
 - Rate inputs can be interpreted either as 37 °C reference rates with Q10 scaling or as already measured at the selected temperature with no Q10 scaling.
 
 ## Remaining important limitations

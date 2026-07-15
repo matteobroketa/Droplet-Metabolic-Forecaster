@@ -382,7 +382,7 @@ run('closed oxygen mass conserved without cells', () => {
       lambda: 0,
       rates: { ocr: 0, gcr: 0, lpr: 0, gln: 0 },
       rq: 1,
-      o2Threshold: 0,
+      o2Threshold: -1,
       initialO2T: 220,
       initialO2B: 80,
       initialO2Oil: 0,
@@ -404,7 +404,7 @@ run('preoxygenated liquid under nitrogen outgasses into closed headspace', () =>
       targetCells: 0,
       lambda: 0,
       rates: { ocr: 0, gcr: 0, lpr: 0, gln: 0 },
-      o2Threshold: 0,
+      o2Threshold: -1,
       initialO2T: 204,
       initialO2B: 204,
       initialO2Oil: 204,
@@ -439,7 +439,7 @@ run('closed tracked CO2 accumulates conservatively', () => {
       oilHalf: 1e9,
       dropHalf: 1e9,
       maxDays: 0.02,
-      o2Threshold: 0,
+      o2Threshold: -1,
     })
   );
   assert(r.mass.co2ResidualPct < 0.2, `unexpected tracked CO2 residual ${r.mass.co2ResidualPct}`);
@@ -468,6 +468,107 @@ run('droplet exchange scales with droplet size', () => {
   const small = geometryScales(makeParams({ volume_nL: 0.07 }));
   const large = geometryScales(makeParams({ volume_nL: 7 }));
   assert(small.dropTarget > large.dropTarget * 4, `expected strong A/V scaling, got ${small.dropTarget} vs ${large.dropTarget}`);
+});
+
+run('finite-pair half-time halves the equal-capacity concentration difference', () => {
+  const r = Engine.simulate(
+    makeParams({
+      halfTimeMode: 'measured_effective',
+      targetCells: 0,
+      lambda: 0,
+      volume_nL: 1,
+      Vaq_uL: 0.001,
+      totalEmulsion_uL: 0.002,
+      liquidFill_uL: 0.002,
+      VoilEmul_uL: 0.001,
+      residualOil_uL: 0,
+      totalOil_uL: 0.001,
+      oil: { capacityRatio: 1 },
+      rates: { ocr: 0, gcr: 0, lpr: 0, gln: 0 },
+      initialO2T: 0,
+      initialO2B: 0,
+      initialO2Oil: 100,
+      initialO2Res: 0,
+      gasHalf: 1e9,
+      oilHalf: 1e9,
+      dropHalf: 10,
+      atmMode: 'closed',
+      headspace_mL: 0,
+      headO2Initial: 0,
+      headCO2Initial: 0,
+      o2Threshold: -1,
+      maxDays: 10 / (24 * 60),
+    })
+  );
+  approx(r.final.O2T, 25, 0.5, 'target compartment should reach the equal-capacity analytical value');
+  approx(r.final.O2Oil, 75, 0.5, 'oil compartment should reach the equal-capacity analytical value');
+  approx(r.final.O2Oil - r.final.O2T, 50, 0.75, 'concentration difference should halve after one entered half-time');
+});
+
+run('finite-pair half-time halves the unequal-capacity concentration difference', () => {
+  const r = Engine.simulate(
+    makeParams({
+      halfTimeMode: 'measured_effective',
+      targetCells: 0,
+      lambda: 0,
+      volume_nL: 1,
+      Vaq_uL: 0.001,
+      totalEmulsion_uL: 0.003,
+      liquidFill_uL: 0.003,
+      VoilEmul_uL: 0.002,
+      residualOil_uL: 0,
+      totalOil_uL: 0.002,
+      oil: { capacityRatio: 1 },
+      rates: { ocr: 0, gcr: 0, lpr: 0, gln: 0 },
+      initialO2T: 0,
+      initialO2B: 0,
+      initialO2Oil: 90,
+      initialO2Res: 0,
+      gasHalf: 1e9,
+      oilHalf: 1e9,
+      dropHalf: 10,
+      atmMode: 'closed',
+      headspace_mL: 0,
+      headO2Initial: 0,
+      headCO2Initial: 0,
+      o2Threshold: -1,
+      maxDays: 10 / (24 * 60),
+    })
+  );
+  approx(r.final.O2T, 30, 0.5, 'target compartment should match the unequal-capacity analytical value');
+  approx(r.final.O2Oil, 75, 0.5, 'oil compartment should match the unequal-capacity analytical value');
+  approx(r.final.O2Oil - r.final.O2T, 45, 0.75, 'unequal-capacity concentration difference should halve after one entered half-time');
+});
+
+run('infinite-boundary half-time retains the entered one-compartment relaxation time', () => {
+  const r = Engine.simulate(
+    makeParams({
+      halfTimeMode: 'measured_effective',
+      targetCells: 0,
+      lambda: 0,
+      volume_nL: 1,
+      Vaq_uL: 0.001,
+      VoilEmul_uL: 0,
+      residualOil_uL: 0.001,
+      totalOil_uL: 0.001,
+      oil: { capacityRatio: 1 },
+      rates: { ocr: 0, gcr: 0, lpr: 0, gln: 0 },
+      O2eq: 100,
+      initialO2T: 0,
+      initialO2B: 0,
+      initialO2Oil: 0,
+      initialO2Res: 0,
+      gasHalf: 10,
+      oilHalf: 1e9,
+      dropHalf: 1e9,
+      atmMode: 'incubator',
+      headspace_mL: 0.25,
+      o2Threshold: -1,
+      maxStepMin: 0.05,
+      maxDays: 10 / (24 * 60),
+    })
+  );
+  approx(r.final.O2Res, 50, 0.1, 'finite compartment should relax halfway toward the boundary after one entered half-time');
 });
 
 run('event timing is interpolated instead of quantized to 0.5 min', () => {
@@ -750,15 +851,15 @@ run('negative additive quantity is rejected', () => {
 });
 
 run('public release identity is consistent', () => {
-  const release = 'v17-audit-20260715';
+  const release = 'v18-transport-20260715';
   assert(html.includes(`release: ${release}`), 'artifact comment release mismatch');
   assert(html.includes(`data-release="${release}"`), 'body release mismatch');
   assert(html.includes(`content="${release}"`), 'meta release mismatch');
-  assert(html.includes('Metabolic Depletion Forecaster v17'), 'title release mismatch');
-  assert.strictEqual(STATE_KEY, 'metabolic-forecaster-v17-audit-20260715', 'state key mismatch');
+  assert(html.includes('Metabolic Depletion Forecaster v18'), 'title release mismatch');
+  assert.strictEqual(STATE_KEY, 'metabolic-forecaster-v18-transport-20260715', 'state key mismatch');
   assert(readme.includes(release), 'README release mismatch');
   assert(limitations.includes(release), 'limitations release mismatch');
-  assert(!html.includes('v15-confidence-20260511'), 'old release identity still present');
+  assert(!html.includes('v17-audit-20260715'), 'old release identity still present');
 });
 
 run('external CO2 boundary marks closed CO2 residual not applicable', () => {
@@ -832,6 +933,50 @@ run('total aqueous volume must cover at least one target droplet', () => {
       assert(p.invalid.some((msg) => msg.includes('Total aqueous volume must be at least one target-droplet volume')), 'missing aqueous-volume validity check');
     }
   );
+});
+
+run('fractional target cells are rejected without rounding', () => {
+  withMockDom(baseFormValues({ targetCells: '1.5' }), () => {
+    const p = gatherParams();
+    assert.strictEqual(p.targetCells, 1.5, 'fractional target cells should not be rounded');
+    assert(p.invalid.some((msg) => msg.includes('must be an integer')), 'fractional target-cell validation missing');
+  });
+});
+
+run('fractional decimals are rejected', () => {
+  withMockDom(baseFormValues({ decimals: '3.5' }), () => {
+    const p = gatherParams();
+    assert.strictEqual(p.decimals, 3.5, 'fractional decimals should not be rounded');
+    assert(p.invalid.some((msg) => msg.includes('Decimals must be an integer')), 'fractional decimals validation missing');
+  });
+});
+
+run('inactive custom OCR is ignored when a built-in line is selected', () => {
+  withMockDom(baseFormValues({ cellLine: 'test_cell', customOCR: '-1' }), () => {
+    const p = gatherParams();
+    assert(!p.invalid.some((msg) => msg.includes('Custom OCR')), 'inactive custom OCR should not be validated');
+  });
+});
+
+run('inactive custom gas values are ignored when a preset gas is selected', () => {
+  withMockDom(baseFormValues({ headspaceGas: 'co2air', customO2: '200', customCO2: '200' }), () => {
+    const p = gatherParams();
+    assert(!p.invalid.some((msg) => msg.includes('Custom gas')), 'inactive custom gas fields should not be validated');
+  });
+});
+
+run('active custom OCR is rejected when the custom line is selected', () => {
+  withMockDom(baseFormValues({ cellLine: 'custom', customOCR: '-1' }), () => {
+    const p = gatherParams();
+    assert(p.invalid.some((msg) => msg.includes('Custom OCR')), 'active custom OCR validation missing');
+  });
+});
+
+run('incompatible finite-headspace carbon mode is rejected under incubator gas mode', () => {
+  withMockDom(baseFormValues({ atmMode: 'incubator', pHBoundaryMode: 'closed_headspace_mass_balance' }), () => {
+    const p = gatherParams();
+    assert(p.invalid.some((msg) => msg.includes('Finite headspace CO₂ mass balance requires a closed gas boundary')), 'incompatible carbon/gas mode should be blocked');
+  });
 });
 
 run('lambda and target-cell upper bounds are enforced without silent coercion', () => {
@@ -1176,6 +1321,33 @@ run('auto bulk O2 matches the grouped isolated-droplet limit when exchange is sl
   assert.strictEqual(auto.bulkO2Regime.selectedMode, 'grouped_transport_limited', 'auto mode should switch to grouped when exchange is slow');
   approx(auto.final.O2Empty, grouped.final.O2Empty, 1e-9, 'auto grouped mode should match the isolated-droplet limit');
   approx(auto.final.O2BulkOccupied, grouped.final.O2BulkOccupied, 1e-9, 'auto grouped mode should match occupied-droplet depletion');
+});
+
+run('auto bulk O2 becomes grouped when proliferation makes later depletion transport-limited', () => {
+  const base = makeParams({
+    bulkO2Mode: 'auto',
+    halfTimeMode: 'measured_effective',
+    lambda: 0.05,
+    N: 500,
+    Vaq_uL: 0.5,
+    prolif: true,
+    dt_h: 0.5,
+    lag_h: 0,
+    carryingCellsPerNL: 600,
+    dropHalf: 20,
+    gasHalf: 1e9,
+    oilHalf: 1e9,
+    rates: { ocr: 3, gcr: 0, lpr: 0, gln: 0 },
+    maxDays: 0.2,
+    o2Threshold: 0,
+    headspace_mL: 0,
+    atmMode: 'closed',
+  });
+  const auto = Engine.simulate(base);
+  const grouped = Engine.simulate({ ...base, bulkO2Mode: 'grouped_transport_limited' });
+  assert.strictEqual(auto.bulkO2Regime.selectedMode, 'grouped_transport_limited', 'auto mode should turn grouped when later growth outruns exchange');
+  assert(auto.bulkO2Regime.sampledTimeMin > 0, 'transport limitation should be detected from a later sampled time, not only the initial state');
+  approx(auto.safeMin, grouped.safeMin, 1e-9, 'auto proliferation-triggered grouped mode should match the grouped reference');
 });
 
 console.log(`PASS: ${passCount}`);
