@@ -10,7 +10,7 @@ Primary regression command:
 node tests/audit_regression.js
 ```
 
-Current minimum enforced checks: `59`
+Current minimum enforced checks: `62`
 
 The regression suite covers:
 
@@ -28,6 +28,9 @@ The regression suite covers:
 - shared-limit and isolated-droplet-limit bulk oxygen checks
 - finite-exchange shared-oil relay between empty and occupied droplet groups
 - transport-limited warning detection with grouped comparison still available
+- carbonate/alkalinity equilibrium against an independent root solve
+- carbonate closed-headspace tracked-carbon conservation
+- monotonic pH protection from increased non-bicarbonate buffer capacity
 - deterministic low/nominal/high demand scenario generation
 - export reproducibility metadata
 - progress-hook solver equivalence
@@ -57,7 +60,7 @@ The browser smoke test verifies:
 
 ## Remaining validation gaps
 
-- The pH layer is still heuristic and not benchmarked against a full carbonate/alkalinity solver.
+- The default pH layer now uses carbonate/alkalinity chemistry, but it is still not benchmarked against a full explicit-medium ionic-strength solver with oil-phase CO₂.
 - Oil-phase CO2 is not yet included in the tracked-carbon residual.
 - Bulk nutrients remain mean-field even when oxygen uses grouped droplet states.
 - The standalone artifact is still monolithic; build currently verifies the committed artifact rather than regenerating it from split source modules.

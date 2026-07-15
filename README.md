@@ -20,7 +20,7 @@ Current release status:
 - Deterministic low-demand / nominal / high-demand scenario runs are available from stored cell-line rate bounds.
 - JSON exports now carry release metadata, audited source commit, audit-manifest SHA-256, raw input snapshots, effective parameters, parameter provenance, actual conductances, solver tolerances, solver diagnostics, warnings, and deterministic scenario summaries.
 - Manual calculations and sweeps now run in a background Web Worker when supported, with progress text and a cancel button instead of freezing the UI thread.
-- pH remains a heuristic bicarbonate/CO₂ estimate, not a full carbonate alkalinity solver.
+- pH now defaults to a carbonate/alkalinity mode that tracks aqueous DIC, headspace CO₂, bicarbonate/carbonate speciation, water dissociation, lactate acid equivalents, and linear non-bicarbonate buffer alkalinity. The legacy heuristic bicarbonate/CO₂ mode remains available for backward comparison.
 
 ## Use
 

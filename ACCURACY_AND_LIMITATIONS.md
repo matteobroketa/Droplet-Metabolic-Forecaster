@@ -28,7 +28,7 @@ Audited release:
 
 ## Remaining important limitations
 
-- The pH layer is still heuristic. It uses bicarbonate, dissolved CO₂, lactate, and a buffer-capacity approximation, not a full DIC and alkalinity solver.
+- The default pH layer now uses a carbonate/alkalinity solve with aqueous DIC, bicarbonate/carbonate speciation, water dissociation, lactate acid equivalents, and linear non-bicarbonate buffer alkalinity. The legacy heuristic bicarbonate/CO₂ mode remains available for backward comparison.
 - Bulk nutrients are not resolved by occupancy class. Bulk O₂ can be shared or grouped depending on the selected or inferred transport regime, but nutrient depletion remains mean-field.
 - Growth remains a logistic approximation and is not fully coupled to all environmental stressors.
 
@@ -107,7 +107,7 @@ Important risk areas:
 - **Suspension vs adherent culture:** the same line can show different rates after suspension adaptation.
 - **Tier C fallback lines:** fallback medians prevent missing data, but they are not line-specific validation.
 - **Gas-exchange geometry:** a static deep emulsion can behave very differently from a mixed oil reservoir, gas-permeable tubing, or an incubator-exposed thin layer.
-- **pH forecasts:** pH depends on lactate, CO₂, bicarbonate, buffer capacity, headspace, and gas exchange. These are approximated, not directly measured.
+- **pH forecasts:** pH now uses a stronger carbonate/alkalinity model, but it is still not a full ionic-strength, explicit-medium, charge-balance solver. Oil-phase CO₂ is still outside the tracked carbon inventory, and explicit HEPES/protein speciation is still approximated through linear non-bicarbonate buffer capacity.
 
 ## Examples from public-rate comparisons
 

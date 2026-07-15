@@ -13,7 +13,7 @@ This artifact is a standalone planning model for droplet emulsions and small-vol
 - emulsion-oil oxygen
 - reservoir-oil oxygen
 - optional finite headspace oxygen
-- target-droplet glucose, glutamine, lactate, dissolved CO2, and heuristic pH
+- target-droplet glucose, glutamine, lactate, tracked aqueous carbon, and selectable pH model
 
 ## Oxygen transport
 
@@ -86,12 +86,19 @@ JSON exports include:
 
 Tracked carbon currently includes:
 
-- target aqueous CO2
-- grouped bulk aqueous CO2
+- target aqueous tracked carbon
+- grouped bulk aqueous tracked carbon
 - finite closed headspace CO2 when `pHBoundaryMode = closed_headspace_mass_balance`
 
-Oil-phase CO2 is not yet tracked. Residuals are therefore labeled as tracked aqueous + headspace CO2 residuals rather than full closed-carbon residuals.
+In `carbonate_alkalinity`, aqueous tracked carbon is DIC and the gas-exchange solve uses the dissolved-CO2 fraction implied by the current carbonate speciation. In `heuristic_legacy`, aqueous tracked carbon remains dissolved CO2. Oil-phase CO2 is not yet tracked, so residuals remain labeled as tracked aqueous + headspace carbon residuals rather than full closed-carbon residuals.
 
 ## pH
 
-pH remains heuristic. The current layer uses bicarbonate, dissolved CO2, lactate accumulation, and an empirical buffer-capacity term. It is not yet a full dissolved inorganic carbon and alkalinity solver.
+Two pH modes are available:
+
+- `carbonate_alkalinity`
+  Default mode. Solves pH from aqueous DIC, bicarbonate/carbonate speciation, water dissociation, lactate acid equivalents, and linear non-bicarbonate buffer alkalinity.
+- `heuristic_legacy`
+  Backward-comparison mode. Uses the older Henderson-Hasselbalch bicarbonate/CO2 approximation with empirical buffer correction.
+
+Even in `carbonate_alkalinity`, this is not yet a full explicit-medium chemistry model: ionic-strength effects, explicit HEPES/protein species, ammonia chemistry, and oil-phase CO2 are still simplified or omitted.

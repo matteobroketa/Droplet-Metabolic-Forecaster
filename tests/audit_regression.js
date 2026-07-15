@@ -11,15 +11,20 @@ if (start < 0 || end < 0) throw new Error('Could not locate model code in HTML s
 
 const model = new Function(
   html.slice(start, end) +
-    '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec, buildRateScenarioResults, buildExportPayload};'
+    '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, carbonateConstants, carbonateSpecies, solveCarbonateState, boundaryEquilibriumPH, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec, buildRateScenarioResults, buildExportPayload};'
 )();
 
 const {
   DATA,
   STATE_KEY,
+  PHYS,
   VESSELS,
   o2Eq,
   co2Eq,
+  carbonateConstants,
+  carbonateSpecies,
+  solveCarbonateState,
+  boundaryEquilibriumPH,
   geometryScales,
   estimateSolverWorkload,
   Engine,
@@ -72,6 +77,7 @@ function makeParams(overrides = {}) {
     CO2Initial: overrides.CO2Initial ?? CO2eq,
     CO2Boundary: overrides.CO2Boundary ?? CO2eq,
     pHBoundaryMode: overrides.pHBoundaryMode ?? 'closed_headspace_mass_balance',
+    pHModel: overrides.pHModel ?? 'heuristic_legacy',
     geometryMode: overrides.geometryMode ?? 'auto',
     storageMode: overrides.storageMode ?? 'static_tube',
     volume_nL,
@@ -156,6 +162,41 @@ function factorial(n) {
   let acc = 1;
   for (let i = 2; i <= n; i += 1) acc *= i;
   return acc;
+}
+
+function independentCarbonateState(dic_mM, targetTA_mM, buffer_mM_per_pH, referencePH, T = 37) {
+  const dT = T - 37;
+  const pKa1 = 6.103 + -0.011 * dT;
+  const pKa2 = 10.329 + -0.02 * dT;
+  const pKw = 13.62 + -0.032 * dT;
+  const K1 = 10 ** -pKa1;
+  const K2 = 10 ** -pKa2;
+  const Kw = 10 ** -pKw;
+  const residual = (pH) => {
+    const H = 10 ** -pH;
+    const den = H * H + K1 * H + K1 * K2;
+    const co2 = dic_mM * (H * H / den);
+    const hco3 = dic_mM * (K1 * H / den);
+    const co3 = dic_mM * (K1 * K2 / den);
+    const oh = (Kw / H) * 1000;
+    return hco3 + 2 * co3 + oh - H * 1000 + buffer_mM_per_pH * (pH - referencePH) - targetTA_mM;
+  };
+  let lo = 0.5;
+  let hi = 13.5;
+  for (let i = 0; i < 80; i += 1) {
+    const mid = (lo + hi) / 2;
+    if (residual(mid) >= 0) hi = mid;
+    else lo = mid;
+  }
+  const pH = (lo + hi) / 2;
+  const H = 10 ** -pH;
+  const den = H * H + K1 * H + K1 * K2;
+  return {
+    pH,
+    co2: dic_mM * (H * H / den),
+    hco3: dic_mM * (K1 * H / den),
+    co3: dic_mM * (K1 * K2 / den),
+  };
 }
 
 function approx(actual, expected, tol, message) {
@@ -357,6 +398,7 @@ function baseFormValues(overrides = {}) {
     tubingLength: '1000',
     volumeT: '0.578',
     pHBoundaryMode: 'closed_headspace_mass_balance',
+    pHModel: 'carbonate_alkalinity',
     geometryMode: 'auto',
     modelTier: 'heuristic',
     halfTimeMode: 'reference_scaled',
@@ -895,6 +937,87 @@ run('external CO2 boundary marks closed CO2 residual not applicable', () => {
   assert.strictEqual(r.mass.co2ResidualPct, null, 'CO2 residual should be not applicable for external boundary mode');
 });
 
+run('carbonate alkalinity solver matches an independent equilibrium root', () => {
+  const p = makeParams({
+    pHModel: 'carbonate_alkalinity',
+    T: 37,
+    pH0: 7.4,
+    buffer: 10,
+    sub: { glc: 25, gln: 4, lac: 0, bicarb: 26 },
+    CO2Initial: 26 / 10 ** (7.4 - 6.103),
+  });
+  const baseline = solveCarbonateState(p.DICInitial || (p.CO2Initial + p.sub.bicarb), 0, p);
+  const targetTA = baseline.hco3 + 2 * baseline.co3 + (10 ** -(13.62 - baseline.pH)) * 1000 - 10 ** -baseline.pH * 1000 + p.buffer * (baseline.pH - p.pH0) - 1.5;
+  const app = solveCarbonateState(28, 1.5, p);
+  const independent = independentCarbonateState(28, targetTA, p.buffer, p.pH0, p.T);
+  approx(app.pH, independent.pH, 1e-4, 'carbonate solver pH mismatch');
+  approx(app.co2, independent.co2, 1e-4, 'carbonate solver dissolved CO2 mismatch');
+  approx(app.hco3, independent.hco3, 1e-4, 'carbonate solver bicarbonate mismatch');
+});
+
+run('carbonate alkalinity mode conserves tracked carbon in finite closed headspace mode', () => {
+  const r = Engine.simulate(
+    makeParams({
+      pHModel: 'carbonate_alkalinity',
+      pHBoundaryMode: 'closed_headspace_mass_balance',
+      targetCells: 10,
+      lambda: 0,
+      rates: { ocr: 2, gcr: 0, lpr: 0.5, gln: 0 },
+      gasHalf: 20,
+      oilHalf: 1e9,
+      dropHalf: 5,
+      maxDays: 0.02,
+      atmMode: 'closed',
+      headspace_mL: 0.25,
+      initialO2T: 200,
+      initialO2B: 200,
+      initialO2Oil: 200,
+      initialO2Res: 200,
+      o2Threshold: 0,
+    })
+  );
+  assert.strictEqual(r.mass.closedCarbonBalance, true, 'carbonate closed finite-headspace mode should report closed tracked-carbon balance');
+  assert(r.mass.co2ResidualPct < 1e-6, `carbonate tracked-carbon residual should stay near zero, got ${r.mass.co2ResidualPct}`);
+});
+
+run('carbonate alkalinity buffer capacity reduces acidification monotonically', () => {
+  const low = Engine.simulate(
+    makeParams({
+      pHModel: 'carbonate_alkalinity',
+      targetCells: 25,
+      lambda: 0,
+      rates: { ocr: 0, gcr: 0, lpr: 40, gln: 0 },
+      buffer: 4,
+      pHFloor: 0,
+      gasHalf: 1e9,
+      oilHalf: 1e9,
+      dropHalf: 1e9,
+      maxDays: 0.02,
+      atmMode: 'closed',
+      headspace_mL: 0,
+      o2Threshold: 0,
+    })
+  );
+  const high = Engine.simulate(
+    makeParams({
+      pHModel: 'carbonate_alkalinity',
+      targetCells: 25,
+      lambda: 0,
+      rates: { ocr: 0, gcr: 0, lpr: 40, gln: 0 },
+      buffer: 16,
+      pHFloor: 0,
+      gasHalf: 1e9,
+      oilHalf: 1e9,
+      dropHalf: 1e9,
+      maxDays: 0.02,
+      atmMode: 'closed',
+      headspace_mL: 0,
+      o2Threshold: 0,
+    })
+  );
+  assert(high.final.pH > low.final.pH, `higher non-bicarbonate buffer capacity should reduce acidification, got low=${low.final.pH}, high=${high.final.pH}`);
+});
+
 run('high-rate pH endpoint is refined onto the threshold state', () => {
   const r = Engine.simulate(
     makeParams({
@@ -1321,6 +1444,7 @@ run('JSON export payload includes reproducibility metadata and conductances', ()
     assert(payload.parameterProvenance && payload.parameterProvenance.cellLine.source, 'parameter provenance missing');
     assert(payload.actualConductances && payload.actualConductances.fmolPerMinPerUM.dropTarget >= 0, 'conductance summary missing');
     assert(payload.solverTolerances && payload.solverTolerances.rootMaxIterationsPerEvent === 36, 'solver tolerances missing');
+    assert.strictEqual(payload.pHModel, 'carbonate_alkalinity', 'export pH model missing');
     assert(Array.isArray(payload.warnings), 'export warnings missing');
     assert(Array.isArray(payload.rateScenarios) && payload.rateScenarios.length === 3, 'export rate scenarios missing');
     assert.strictEqual(typeof payload.trackedCarbonResidualApplicable, 'boolean', 'tracked-carbon applicability missing');

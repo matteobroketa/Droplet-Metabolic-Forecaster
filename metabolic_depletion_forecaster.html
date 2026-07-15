@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Metabolic Depletion Forecaster v18</title>
 <meta name="artifact-release" content="v18-transport-20260715" />
-<meta name="artifact-commit" content="1631ee7d0242932e8ab04801589f038f88b42f02" />
-<meta name="artifact-manifest-sha256" content="1A9CD360AE578D285711BEB3AAAFECEA87114C32CB9F1A67DC7ACEBF025FD621" />
+<meta name="artifact-commit" content="b101f0585c75fbcfb8b632a9b48238866ca2dc81" />
+<meta name="artifact-manifest-sha256" content="38E183A9C580931A10C9F8AB00FAF1CBCF80DCB5D33FD0D407576895D8EF4E45" />
 <meta name="description" content="Forecast oxygen, nutrient, and pH limits in droplet emulsions and small-volume cultures." />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%232563eb'/%3E%3Cstop offset='1' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='%2308111f'/%3E%3Ccircle cx='24' cy='32' r='12' fill='url(%23g)'/%3E%3Ccircle cx='42' cy='25' r='7' fill='%238b5cf6'/%3E%3Ccircle cx='42' cy='41' r='5' fill='%2306b6d4'/%3E%3Cpath d='M15 50c10-8 27-8 38 0' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' opacity='.9'/%3E%3C/svg%3E" />
 <style>
@@ -97,7 +97,7 @@
           <div class="field"><label for="initAqO2Pct">Initial aqueous O₂ (% air saturation)</label><input id="initAqO2Pct" class="input" type="number" min="0" max="300" step="1" value="100"><small>Independent of the selected boundary gas. 100% means equilibrium with humidified air at the selected temperature.</small></div>
           <div class="field"><label for="initOilO2Pct">Initial emulsion oil O₂ (% air saturation)</label><input id="initOilO2Pct" class="input" type="number" min="0" max="300" step="1" value="100"><small>Water-equivalent oil oxygen relative to humidified air equilibrium. Lower this for degassed oil, higher for preoxygenated oil.</small></div>
           <div class="field"><label for="initReservoirO2Pct">Initial reservoir oil O₂ (% air saturation)</label><input id="initReservoirO2Pct" class="input" type="number" min="0" max="300" step="1" value="100"><small>Independent starting state for excess or loop oil. Closed-headspace runs often depend strongly on this value.</small></div>
-          <div class="field"><label for="modelTier">Interpretation mode</label><select id="modelTier"><option value="heuristic">planning estimate</option><option value="measured_inputs">measured exchange inputs supplied</option></select><small>This selector changes interpretation and warnings only. The pH layer remains an approximate bicarbonate/CO₂ model, not a full charge-balance solver.</small></div>
+          <div class="field"><label for="modelTier">Interpretation mode</label><select id="modelTier"><option value="heuristic">planning estimate</option><option value="measured_inputs">measured exchange inputs supplied</option></select><small>This selector changes interpretation and warnings only. The default pH layer uses carbonate/alkalinity chemistry with linear non-bicarbonate buffering, not a full explicit-medium charge-balance solver.</small></div>
           <div class="field"><label for="halfTimeMode">Half-time interpretation</label><select id="halfTimeMode"><option value="reference_scaled" selected>reference half-times, auto-scaled</option><option value="measured_effective">effective measured for this exact configuration</option></select><small>Use reference mode when entered half-times should be geometry-scaled. Use effective measured mode to apply your entered gas, oil, and droplet half-times directly with no automatic geometry rescaling.</small></div>
         </div>
         <div class="model-grid" style="margin-top:14px" id="poissonCards"></div>
@@ -128,6 +128,7 @@
           <div class="field"><label for="pHFloor">pH floor</label><input id="pHFloor" class="input" type="number" min="6.2" max="7.3" step="0.01" value="6.80"></div>
           <div class="field"><label for="pHCeiling">pH ceiling</label><input id="pHCeiling" class="input" type="number" min="7.3" max="8.1" step="0.01" value="7.65"></div>
           <div class="field"><label for="pHBoundaryMode">Bicarbonate pH boundary</label><select id="pHBoundaryMode"><option value="fixed_starting_pH_boundary" selected>infinite CO₂ reservoir matching starting pH</option><option value="selected_gas_boundary">selected boundary-gas CO₂</option><option value="closed_headspace_mass_balance">finite closed-headspace CO₂ mass balance</option></select><small>Fixed mode is an imposed external reservoir, not a closed carbon balance. Use the finite-headspace mode for closed-vial carbon accumulation.</small></div>
+          <div class="field"><label for="pHModel">pH model</label><select id="pHModel"><option value="carbonate_alkalinity" selected>carbonate / alkalinity</option><option value="heuristic_legacy">heuristic legacy</option></select><small>Carbonate mode solves DIC, bicarbonate, carbonate, water, and linear non-bicarbonate buffer alkalinity. Legacy mode keeps the older Henderson-Hasselbalch approximation for backward comparison.</small></div>
           <div class="field"><label for="o2ThresholdMode">O₂ threshold mode</label><select id="o2ThresholdMode"><option value="selected_pct">percent of selected-gas equilibrium</option><option value="air_pct">percent of air saturation</option><option value="absolute_uM">absolute aqueous O₂ (µM)</option></select><small>Choose whether the viability endpoint is tied to the boundary gas, air saturation, or an absolute measured threshold.</small></div>
           <div class="field"><label for="hypoxiaPct">O₂ threshold value</label><input id="hypoxiaPct" class="input" type="number" min="0.001" max="500" step="0.05" value="1.0"><small>Meaning depends on the threshold mode above.</small></div>
         </div>
@@ -215,7 +216,7 @@
       <li><strong>Diagnostics:</strong> compare oxygen capacity in target droplet, empty droplets, continuous oil, residual oil, and headspace.</li>
       <li><strong>Endpoint:</strong> the reported window is the first failure in the evaluated droplet: hypoxia, glucose depletion, glutamine depletion, or pH failure.</li>
     </ul>
-    <div class="notice"><strong>Model structure.</strong> Oxygen is integrated as coupled compartments: evaluated droplet, bulk droplet population, emulsion oil, residual oil, and gas phase. Glucose and glutamine are evaluated inside the productive droplet. pH includes lactate accumulation, bicarbonate consumption, and RQ-based dissolved CO₂ accumulation with gas exchange relief using a Henderson-Hasselbalch bicarbonate baseline.</div>
+    <div class="notice"><strong>Model structure.</strong> Oxygen is integrated as coupled compartments: evaluated droplet, bulk droplet population, emulsion oil, residual oil, and gas phase. Glucose and glutamine are evaluated inside the productive droplet. pH can use a carbonate/alkalinity solver with DIC, bicarbonate, carbonate, water, and linear non-bicarbonate buffer alkalinity, or the legacy Henderson-Hasselbalch approximation for backward comparison.</div>
   </div>
 </div>
 
@@ -246,8 +247,8 @@
       <p>Below the Pasteur threshold, glycolysis and lactate production increase smoothly up to the selected maximum multiplier.</p>
     </details>
     <details><summary>Substrate and pH integration</summary>
-      <p><strong>Henderson-Hasselbalch bicarbonate/CO₂ pH model.</strong> The pH relation is named explicitly because bicarbonate-buffered culture media are governed by the CO₂/HCO₃⁻ equilibrium: pH = pKₐ + log10([HCO₃⁻]/[CO₂]).</p>
-      <p>Consumption and production are integrated with adaptive sub-steps to avoid unstable fast-exchange updates. For bicarbonate-buffered media, the initial dissolved CO₂ is inferred from starting pH and bicarbonate. The pH boundary mode then chooses whether the boundary is held at starting pH, driven by selected-gas CO₂, or governed by finite closed-headspace CO₂ mass balance.</p><code>dO₂_target/dt = F_target − n_target × OCR_eff</code><br><code>dGlucose/dt = −n_target × GCR_eff / V_droplet,nL / 1000</code><br><code>dGlutamine/dt = −n_target × GlnCR_eff / V_droplet,nL / 1000</code><br><code>dLactate/dt = n_target × LPR_eff / V_droplet,nL / 1000</code><br><code>CO₂_initial = [HCO₃⁻] / 10^(pH₀ − pKₐ)</code><br><code>fixed boundary: CO₂_boundary = CO₂_initial</code><br><code>selected gas boundary: CO₂_boundary = K_H,CO₂ × xCO₂ × (1 − pH₂O)</code><br><code>closed headspace: CO₂_boundary(t) is derived from headspace CO₂ mass via PV = nRT</code><br><code>dCO₂/dt = n_target × OCR_eff × RQ / V_droplet,nL / 1000 − exchange_relief</code><br><code>pH = pH₀ + (pKₐ + log10([HCO₃⁻](t)/CO₂(t)) − pH_baseline)</code>
+      <p><strong>Carbonate / alkalinity pH mode.</strong> The default pH layer treats aqueous tracked carbon as dissolved inorganic carbon (DIC) and solves carbonate speciation from total alkalinity, water dissociation, and linear non-bicarbonate buffer capacity.</p>
+      <p>Consumption and production are integrated with adaptive sub-steps to avoid unstable fast-exchange updates. For bicarbonate-buffered media, the initial dissolved CO₂ is inferred from starting pH and bicarbonate. The pH boundary mode then chooses whether the boundary is held at starting pH, driven by selected-gas CO₂, or governed by finite closed-headspace CO₂ mass balance.</p><code>dO₂_target/dt = F_target − n_target × OCR_eff</code><br><code>dGlucose/dt = −n_target × GCR_eff / V_droplet,nL / 1000</code><br><code>dGlutamine/dt = −n_target × GlnCR_eff / V_droplet,nL / 1000</code><br><code>dLactate/dt = n_target × LPR_eff / V_droplet,nL / 1000</code><br><code>DIC = [CO₂*] + [HCO₃⁻] + [CO₃²⁻]</code><br><code>TA(t) = TA₀ − Δlactate + β_nonbicarb × (pH − pH₀)</code><br><code>fixed boundary: CO₂_boundary = CO₂_initial</code><br><code>selected gas boundary: CO₂_boundary = K_H,CO₂ × xCO₂ × (1 − pH₂O)</code><br><code>closed headspace: CO₂_boundary(t) is derived from headspace CO₂ mass via PV = nRT</code><br><code>dDIC/dt = n_target × OCR_eff × RQ / V_droplet,nL / 1000 − exchange_relief</code><br><code>solve TA = [HCO₃⁻] + 2[CO₃²⁻] + [OH⁻] − [H⁺] + β_nonbicarb × (pH − pH₀)</code><br><code>legacy mode: pH = pH₀ + (pKₐ + log10([HCO₃⁻](t)/CO₂(t)) − pH_baseline)</code>
     </details>
     <details><summary>Proliferation and endpoint</summary>
       <p>When proliferation is enabled, target-cell number follows logistic growth with the configured carrying capacity.</p><code>K = carrying_capacity_cells_per_nL × V_droplet,nL</code><br><code>n(t) = K n₀ exp(rt) / (K + n₀(exp(rt) − 1))</code><br><code>r = ln(2) / doubling_time</code>
@@ -426,7 +427,7 @@ function auditCellDatabase(cellLines){
 applyCellDatabaseAudit(DATA.cellLines);
 const CELL_DATABASE_ISSUES = auditCellDatabase(DATA.cellLines);
 
-const PHYS={kH_O2_37C_mM_atm:1.094,kH_CO2_37C_mM_atm:28.88,waterVapor37_atm:.0627,R:0.082057,Q10_OCR:2.3,Q10_GCR:1.8,Q10_LPR:1.9,Q10_GLN:1.8};
+const PHYS={kH_O2_37C_mM_atm:1.094,kH_CO2_37C_mM_atm:28.88,waterVapor37_atm:.0627,R:0.082057,Q10_OCR:2.3,Q10_GCR:1.8,Q10_LPR:1.9,Q10_GLN:1.8,pKa1_37:6.103,pKa1TempCoeff:-0.011,pKa2_37:10.329,pKa2TempCoeff:-0.02,pKw_37:13.62,pKwTempCoeff:-0.032};
 const VESSELS={
   eppendorf_1_5:{id:'eppendorf_1_5',name:'1.5 mL microcentrifuge tube',kind:'tube',capacity_uL:1500,diameter_mm:6.0,storageMode:'static_tube'},
   falcon_15:{id:'falcon_15',name:'15 mL conical tube',kind:'tube',capacity_uL:15000,diameter_mm:14.5,storageMode:'static_tube'},
@@ -445,6 +446,93 @@ function gasPreset(){const id=$('#headspaceGas').value; if(id==='air')return {na
 function vaporAtm(T){const es_hPa=6.1094*Math.exp(17.625*T/(T+243.04)); return clamp(es_hPa/1013.25,0,.2);}
 function o2Eq(T,gas){const kh=PHYS.kH_O2_37C_mM_atm*Math.exp(-.025*(T-37)); return Math.max(0,kh*gas.o2*(1-vaporAtm(T))*1000);}
 function co2Eq(T,gas){const kh=PHYS.kH_CO2_37C_mM_atm*Math.exp(-.025*(T-37)); return Math.max(.001,kh*gas.co2*(1-vaporAtm(T)));}
+function carbonateConstants(T){
+  const dT=(Number.isFinite(T)?T:37)-37;
+  const pKa1=PHYS.pKa1_37+PHYS.pKa1TempCoeff*dT;
+  const pKa2=PHYS.pKa2_37+PHYS.pKa2TempCoeff*dT;
+  const pKw=PHYS.pKw_37+PHYS.pKwTempCoeff*dT;
+  return {pKa1,pKa2,pKw,K1:Math.pow(10,-pKa1),K2:Math.pow(10,-pKa2),Kw:Math.pow(10,-pKw)};
+}
+function carbonateSpecies(dic_mM,pH,T){
+  const constants=carbonateConstants(T);
+  const H=Math.pow(10,-clamp(Number.isFinite(pH)?pH:7.4,0,14));
+  const den=Math.max(1e-30,H*H+constants.K1*H+constants.K1*constants.K2);
+  const alpha0=(H*H)/den;
+  const alpha1=(constants.K1*H)/den;
+  const alpha2=(constants.K1*constants.K2)/den;
+  const dic=Math.max(0,Number.isFinite(dic_mM)?dic_mM:0);
+  const co2=dic*alpha0;
+  const hco3=dic*alpha1;
+  const co3=dic*alpha2;
+  return {pH:-Math.log10(H),H,alpha0,alpha1,alpha2,co2,hco3,co3,h_mM:H*1000,oh_mM:(constants.Kw/Math.max(H,1e-14))*1000};
+}
+function carbonateBaseline(p){
+  if(p&&p._carbonateBaseline)return p._carbonateBaseline;
+  const pH0=Number.isFinite(p?.pH0)?p.pH0:7.4;
+  const bicarb=Math.max(0,p?.sub?.bicarb||0);
+  const co2=Math.max(1e-6,Number.isFinite(p?.CO2Initial)?p.CO2Initial:(Number.isFinite(p?.CO2eq)?p.CO2eq:0.001));
+  const constants=carbonateConstants(p?.T);
+  const H=Math.pow(10,-clamp(pH0,0,14));
+  const co3=bicarb>0?bicarb*constants.K2/Math.max(H,1e-14):0;
+  const dic=Math.max(0,co2+bicarb+co3);
+  const oh_mM=(constants.Kw/Math.max(H,1e-14))*1000;
+  const ta0=bicarb+2*co3+oh_mM-H*1000;
+  const baseline={dic0:dic,ta0,pH0};
+  if(p)p._carbonateBaseline=baseline;
+  return baseline;
+}
+function solveCarbonateState(dic_mM,acidEq_mM,p,referencePH=null){
+  const baseline=carbonateBaseline(p);
+  const targetTA=baseline.ta0-Math.max(0,Number.isFinite(acidEq_mM)?acidEq_mM:0);
+  const beta=Math.max(0,Number.isFinite(p?.buffer)?p.buffer:0);
+  const refPH=referencePH==null?baseline.pH0:referencePH;
+  const residual=(pH)=>{
+    const spec=carbonateSpecies(dic_mM,pH,p?.T);
+    const nonBicarb=beta*(pH-refPH);
+    return spec.hco3+2*spec.co3+spec.oh_mM-spec.h_mM+nonBicarb-targetTA;
+  };
+  let lo=4, hi=10.5, flo=residual(lo), fhi=residual(hi);
+  if(!(flo<=0&&fhi>=0)){
+    lo=0.5; hi=13.5; flo=residual(lo); fhi=residual(hi);
+  }
+  let pH;
+  if(!(flo<=0&&fhi>=0)){
+    const candidates=[0.5,2,4,6,7,8,10,12,13.5].map(v=>({pH:v,res:Math.abs(residual(v))})).sort((a,b)=>a.res-b.res);
+    pH=candidates[0].pH;
+  }else{
+    for(let i=0;i<60;i++){
+      const mid=(lo+hi)/2;
+      const fm=residual(mid);
+      if(fm>=0)hi=mid; else lo=mid;
+    }
+    pH=(lo+hi)/2;
+  }
+  const species=carbonateSpecies(dic_mM,pH,p?.T);
+  return {...species,dic:Math.max(0,dic_mM),targetTA};
+}
+function boundaryEquilibriumPH(boundaryCO2_mM,p){
+  const baseline=carbonateBaseline(p);
+  const beta=Math.max(0,Number.isFinite(p?.buffer)?p.buffer:0);
+  const targetTA=baseline.ta0;
+  const residual=(pH)=>{
+    const spec=carbonateSpecies(1,pH,p?.T);
+    const alpha0=Math.max(1e-9,spec.alpha0);
+    const dic=Math.max(0,boundaryCO2_mM)/alpha0;
+    const state=carbonateSpecies(dic,pH,p?.T);
+    return state.hco3+2*state.co3+state.oh_mM-state.h_mM+beta*(pH-baseline.pH0)-targetTA;
+  };
+  let lo=4, hi=10.5, flo=residual(lo), fhi=residual(hi);
+  if(!(flo<=0&&fhi>=0)){
+    lo=0.5; hi=13.5; flo=residual(lo); fhi=residual(hi);
+  }
+  if(!(flo<=0&&fhi>=0))return baseline.pH0;
+  for(let i=0;i<60;i++){
+    const mid=(lo+hi)/2;
+    const fm=residual(mid);
+    if(fm>=0)hi=mid; else lo=mid;
+  }
+  return (lo+hi)/2;
+}
 function sanitizeHalf(half){return Math.max(.05,Number.isFinite(half)?half:.05);}
 function kFromHalf(half){return Math.log(2)/sanitizeHalf(half);}
 function effectiveHalfTime(half,scale=1,mode='reference_scaled'){const base=sanitizeHalf(half), safeScale=Math.max(1e-9,Number.isFinite(scale)?scale:1); return mode==='measured_effective'?base:base/safeScale;}
@@ -627,7 +715,7 @@ function buildParameterProvenance(p){
     vessel:{preset:$('#vesselPreset')?.value||null,environmentPreset:$('#vesselPresetEnv')?.value||null,name:p.vessel?.name||null,storageMode:p.storageMode,geometryMode:p.geometryMode},
     rates:{temperatureMode:p.rateTemperatureMode,halfTimeMode:p.halfTimeMode,customCell:!!p.rateScenarioSource?.customCell,overridesActive:!!p.rateScenarioSource?.overridesActive,q10Factor:p.q10Factor,activeAdditives:activeAdditiveSelections()},
     oxygen:{bulkO2ModeRequested:p.bulkO2Mode,thresholdMode:p.o2ThresholdMode,thresholdValue:p.o2ThresholdValue,initialAqPct:p.initAqO2Pct,initialOilPct:p.initOilO2Pct,initialReservoirPct:p.initReservoirO2Pct},
-    carbon:{pHBoundaryMode:p.pHBoundaryMode,pHModel:'heuristic_bicarbonate_henderson_hasselbalch',trackedCarbonInventory:'target aqueous + grouped bulk aqueous + optional finite headspace'},
+    carbon:{pHBoundaryMode:p.pHBoundaryMode,pHModel:p.pHModel,trackedCarbonInventory:p.pHModel==='carbonate_alkalinity'?'target aqueous + grouped bulk aqueous DIC + optional finite headspace CO₂':'target aqueous + grouped bulk aqueous dissolved CO₂ + optional finite headspace CO₂'},
   };
 }
 function artifactMetadata(){
@@ -885,8 +973,9 @@ function gatherParams(){
   const airO2Eq=o2Eq(T,airGas);
   const CO2eq=co2Eq(T,gas);
   const pHBoundaryMode=$('#pHBoundaryMode')?.value||'fixed_starting_pH_boundary';
+  const pHModel=$('#pHModel')?.value||'carbonate_alkalinity';
   const pH0Input=Number.isFinite(Number($('#pH0').value))?Number($('#pH0').value):7.4;
-  const CO2FromStartingPH=(sub.bicarb>0.5)?clamp(sub.bicarb/Math.pow(10,pH0Input-6.103),0.001,200):CO2eq;
+  const CO2FromStartingPH=(sub.bicarb>0.5)?clamp(sub.bicarb/Math.pow(10,pH0Input-carbonateConstants(T).pKa1),0.001,200):CO2eq;
   const CO2Initial=CO2FromStartingPH;
   const CO2Boundary=(sub.bicarb>0.5?(pHBoundaryMode==='fixed_starting_pH_boundary'?CO2FromStartingPH:CO2eq):CO2eq);
   let headspace_mL=($('#vesselPreset')?.value&&$('#vesselPreset').value!=='custom')?autoHeadspace_mL(vessel):Math.max(0,Number.isFinite(Number($('#headspaceVolume').value))?Number($('#headspaceVolume').value):0);
@@ -913,7 +1002,7 @@ function gatherParams(){
     totalCells:occupancy.expectedTotalCells,bulkInitialCells:occupancy.expectedBulkCells,occupancy,occupiedDroplets:occupancy.occupiedDroplets,occupiedFraction:occupancy.occupiedFraction,
     totalEmulsion_uL,Vaq_uL,VoilEmul_uL,residualOil_uL,totalOil_uL,liquidFill_uL,vessel,vesselCapacity_uL,tubingLength_mm,filledTubingLength_mm,
     vesselDiameter_mm,vesselArea_mm2,emulsionDepth_mm,residualOilDepth_mm,
-    CO2Initial,CO2Boundary,pHBoundaryMode,geometryMode:$('#geometryMode')?.value||'auto',modelTier:$('#modelTier')?.value||'heuristic',halfTimeMode:$('#halfTimeMode')?.value||'reference_scaled',rateTemperatureMode,q10Factor,
+    CO2Initial,CO2Boundary,pHBoundaryMode,pHModel,geometryMode:$('#geometryMode')?.value||'auto',modelTier:$('#modelTier')?.value||'heuristic',halfTimeMode:$('#halfTimeMode')?.value||'reference_scaled',rateTemperatureMode,q10Factor,
     O2eq,airO2Eq,CO2eq,atmMode:$('#atmMode').value,headspace_mL,
     initHeadspaceO2Pct,initHeadspaceCO2Pct,
     headO2Initial:dryGasPctToHeadspaceMoles(initHeadspaceO2Pct,headspace_mL,T),
@@ -939,6 +1028,7 @@ function gatherParams(){
   p.initialO2B=p.initialO2T;
   p.initialO2Oil=p.airO2Eq*p.initOilO2Pct/100;
   p.initialO2Res=p.airO2Eq*p.initReservoirO2Pct/100;
+  p.DICInitial=carbonateBaseline(p).dic0;
   p.chartO2Reference=Math.max(1,p.airO2Eq,p.O2eq,p.initialO2T,p.initialO2Oil,p.initialO2Res,p.o2Threshold);
   hardValidateInputs(p);
   p.estimatedWorkload=estimateSolverWorkload(p);
@@ -955,7 +1045,8 @@ function gatherParams(){
   else if(p.targetProbability<0.01)warn('warn',`The evaluated droplet occupancy is uncommon under λ: P(K=${p.targetCells}) = ${fmt(p.targetProbability*100,3)}%.`);
   const rt=String(cell.rateTier||cell.evidenceTier||'').toUpperCase();
   if(['B','C','D'].includes(rt))warn('warn',`Cell-line metabolic rates are rate tier ${rt}; run low/nominal/high measured-rate scenarios before quantitative use.`);
-  if(p.modelTier==='heuristic')warn('warn','The pH and growth layers remain heuristic. Use measured exchange half-times and direct endpoint validation for release-critical experiments.');
+  if(p.modelTier==='heuristic'&&p.pHModel==='heuristic_legacy')warn('warn','Both the pH and growth layers remain heuristic. Use measured exchange half-times and direct endpoint validation for release-critical experiments.');
+  else if(p.modelTier==='heuristic')warn('warn','Growth remains heuristic. The pH layer is using the carbonate/alkalinity solver with linear non-bicarbonate buffer alkalinity, not a full ionic-strength charge-balance medium model.');
   if(p.modelTier==='measured_inputs'&&p.halfTimeMode==='reference_scaled')warn('warn','Measured-input interpretation is active, but exchange half-times are still being treated as geometry-scaled reference values. Switch half-time interpretation to "effective measured" if your entered half-times already match this exact configuration.');
   if(p.halfTimeMode==='measured_effective')warn('ok','Exchange half-times are being applied directly for the current configuration with no automatic geometry rescaling.');
   if(p.rateTemperatureMode==='measured_selected_temperature')warn('ok','Custom and override rates are being used as already measured at the selected temperature; no Q10 correction is applied.');
@@ -965,8 +1056,8 @@ function gatherParams(){
   }
   if(p.sub.bicarb>0.5){
     const initialBoundaryCO2=p.pHBoundaryMode==='fixed_starting_pH_boundary'?p.CO2Boundary:(p.pHBoundaryMode==='closed_headspace_mass_balance'?co2HeadEq({headCO2:p.headCO2Initial},p):p.CO2eq);
-    const pHEq=6.103+Math.log10(Math.max(.05,p.sub.bicarb)/Math.max(.001,initialBoundaryCO2));
-    if(Math.abs(pHEq-p.pH0)>0.15)warn('warn',`Starting pH ${fmt(p.pH0,2)} is inconsistent with the simplified bicarbonate equilibrium for the selected gas by about ${fmt(Math.abs(pHEq-p.pH0),2)} pH units. The run begins from a nonequilibrium state.`);
+    const pHEq=p.pHModel==='carbonate_alkalinity'?boundaryEquilibriumPH(initialBoundaryCO2,p):(carbonateConstants(p.T).pKa1+Math.log10(Math.max(.05,p.sub.bicarb)/Math.max(.001,initialBoundaryCO2)));
+    if(Math.abs(pHEq-p.pH0)>0.15)warn('warn',`Starting pH ${fmt(p.pH0,2)} is inconsistent with the ${p.pHModel==='carbonate_alkalinity'?'carbonate/alkalinity':'simplified bicarbonate'} equilibrium for the selected gas by about ${fmt(Math.abs(pHEq-p.pH0),2)} pH units. The run begins from a nonequilibrium state.`);
   }
   if(p.O2eq<5)warn('warn','Selected boundary gas is effectively anoxic. Initial liquid and closed-headspace oxygen are entered independently and may still start above zero.');
   if(p.estimatedWorkload.estimatedSteps>500000)warn('warn',`Estimated solver workload is high at about ${fmt(p.estimatedWorkload.estimatedSteps,0)} accepted sub-steps. Auto-rerun is disabled for this configuration; use Calculate explicitly.`);
@@ -1205,6 +1296,7 @@ function solveLinearExchange(nodes,finiteEdges,boundaryEdges,dt){
 }
 const Engine={simulate(p,hooks={}){
   const baseDt=Math.max(0.0005,Number.isFinite(p.maxStepMin)?p.maxStepMin:0.5),maxMin=Math.max(.001,p.maxDays)*24*60,chartEvery=5;
+  const initialTrackedCarbon=p.pHModel==='carbonate_alkalinity'?(Number.isFinite(p.DICInitial)?p.DICInitial:carbonateBaseline(p).dic0):(Number.isFinite(p.CO2Initial)?p.CO2Initial:p.CO2eq);
   const capT=Math.max(1e-9,p.volume_nL);
   const baseBulkCaps=occupancyCapacities(p);
   const bulkRegime=resolveBulkOxygenRegime(p,null,baseBulkCaps);
@@ -1232,10 +1324,10 @@ const Engine={simulate(p,hooks={}){
     Glc:p.sub.glc,
     Gln:p.sub.gln,
     Lac:p.sub.lac,
-    mCO2T:capT*1000*p.CO2Initial,
-    mCO2Empty:bulkCaps.capEmpty*1000*p.CO2Initial,
-    mCO2Single:bulkCaps.capSingle*1000*p.CO2Initial,
-    mCO2Multi:bulkCaps.capMulti*1000*p.CO2Initial,
+    mCO2T:capT*1000*initialTrackedCarbon,
+    mCO2Empty:bulkCaps.capEmpty*1000*initialTrackedCarbon,
+    mCO2Single:bulkCaps.capSingle*1000*initialTrackedCarbon,
+    mCO2Multi:bulkCaps.capMulti*1000*initialTrackedCarbon,
     pH:p.pH0,
     nT:p.targetCells,
     nSingle:0,
@@ -1325,7 +1417,7 @@ const Engine={simulate(p,hooks={}){
   return {
     params:p,chart,log,events,limiter,safeMin,final,error:solverError,
     capacities:{capT,capBulk,capBulkOccupied:bulkCaps.capBulkOccupied,capEmpty:bulkCaps.capEmpty,capSingle:bulkCaps.capSingle,capMulti:bulkCaps.capMulti,capOilE,capOilR,capHead:kinetics.headCapO2,capHeadCO2:kinetics.headCapCO2},
-    mass:{O2total0,O2totalFinal,o2Consumed,o2Residual,o2ResidualPct,CO2tracked0,CO2trackedFinal,co2Produced,co2Residual,co2ResidualPct,closedCarbonBalance:kinetics.finiteHeadCO2},
+    mass:{O2total0,O2totalFinal,o2Consumed,o2Residual,o2ResidualPct,CO2tracked0,CO2trackedFinal,co2Produced,co2Residual,co2ResidualPct,trackedCarbonLabel:p.pHModel==='carbonate_alkalinity'?'tracked aqueous DIC + headspace CO₂':'tracked aqueous dissolved CO₂ + headspace CO₂',closedCarbonBalance:kinetics.finiteHeadCO2},
     geometry:geom,effective,conductances,bulkO2Regime:bulkRegime,
     solver:{acceptedSteps,rejectedTrials,rootIterations,estimatedSteps:estimate.estimatedSteps||0,stableDtEstimate:estimate.stableDtEstimate||stableDt,actualMinStep,actualMedianStep,actualMaxStep,stepBudget,rootBudget,settings:{baseDtMin:baseDt,rootDtToleranceMin:1e-6,pHEndpointTolerance:1e-5,otherEndpointTolerance:1e-6,rootMaxIterationsPerEvent:36}},
     initialFlux:initialFlux(p,capT,capBulk,capOilE,capOilR,geom)
@@ -1383,7 +1475,7 @@ function advanceStep(prev,dt,p,caps,kin){
   s.mCO2Single+=co2ProdSingle;
   s.mCO2Multi+=co2ProdMulti;
   refreshState(s,caps,p);
-  const co2Nodes=[{key:'mCO2T',amount:s.mCO2T,cap:caps.capT*1000},{key:'mCO2Empty',amount:s.mCO2Empty,cap:caps.capEmpty*1000},{key:'mCO2Single',amount:s.mCO2Single,cap:caps.capSingle*1000},{key:'mCO2Multi',amount:s.mCO2Multi,cap:caps.capMulti*1000},...(kin.finiteHeadCO2?[{key:'headCO2',amount:s.headCO2,cap:kin.headCapCO2}]:[])];
+  const co2Nodes=[{key:'mCO2T',amount:s.mCO2T,cap:p.pHModel==='carbonate_alkalinity'?co2TransferCapacity(caps.capT,s.co2AlphaT):caps.capT*1000},{key:'mCO2Empty',amount:s.mCO2Empty,cap:p.pHModel==='carbonate_alkalinity'?co2TransferCapacity(caps.capEmpty,s.co2AlphaEmpty):caps.capEmpty*1000},{key:'mCO2Single',amount:s.mCO2Single,cap:p.pHModel==='carbonate_alkalinity'?co2TransferCapacity(caps.capSingle,s.co2AlphaSingle):caps.capSingle*1000},{key:'mCO2Multi',amount:s.mCO2Multi,cap:p.pHModel==='carbonate_alkalinity'?co2TransferCapacity(caps.capMulti,s.co2AlphaMulti):caps.capMulti*1000},...(kin.finiteHeadCO2?[{key:'headCO2',amount:s.headCO2,cap:kin.headCapCO2}]:[])];
   const co2Finite=kin.finiteHeadCO2?[{a:'mCO2T',b:'headCO2',G:kin.Gco2Target},{a:'mCO2Empty',b:'headCO2',G:kin.Gco2Empty},{a:'mCO2Single',b:'headCO2',G:kin.Gco2Single},{a:'mCO2Multi',b:'headCO2',G:kin.Gco2Multi}]:[];
   const co2Boundary=kin.finiteHeadCO2?[]:[{node:'mCO2T',G:kin.Gco2Target,conc:co2HeadEq(s,p)},{node:'mCO2Empty',G:kin.Gco2Empty,conc:co2HeadEq(s,p)},{node:'mCO2Single',G:kin.Gco2Single,conc:co2HeadEq(s,p)},{node:'mCO2Multi',G:kin.Gco2Multi,conc:co2HeadEq(s,p)}];
   const solvedCO2=solveLinearExchange(co2Nodes,co2Finite,co2Boundary,dt);
@@ -1412,11 +1504,46 @@ function refreshState(s,caps,p){
   s.O2BulkOccupied=caps.capBulkOccupied>0?(s.mO2Single+s.mO2Multi)/caps.capBulkOccupied:s.O2T;
   s.O2Oil=caps.capOilE>0?s.mO2Oil/caps.capOilE:0;
   s.O2Res=caps.capOilR>0?s.mO2Res/caps.capOilR:s.O2Oil;
-  s.CO2T=caps.capT>0?s.mCO2T/(caps.capT*1000):p.CO2Initial;
-  s.CO2Empty=caps.capEmpty>0?s.mCO2Empty/(caps.capEmpty*1000):s.CO2T;
-  s.CO2Single=caps.capSingle>0?s.mCO2Single/(caps.capSingle*1000):s.CO2T;
-  s.CO2Multi=caps.capMulti>0?s.mCO2Multi/(caps.capMulti*1000):s.CO2T;
-  s.CO2B=caps.capBulk>0?s.mCO2B/(caps.capBulk*1000):s.CO2T;
+  if(p.pHModel==='carbonate_alkalinity'){
+    const dic0=Number.isFinite(p.DICInitial)?p.DICInitial:carbonateBaseline(p).dic0;
+    s.DICT=caps.capT>0?s.mCO2T/(caps.capT*1000):dic0;
+    s.DICEmpty=caps.capEmpty>0?s.mCO2Empty/(caps.capEmpty*1000):s.DICT;
+    s.DICSingle=caps.capSingle>0?s.mCO2Single/(caps.capSingle*1000):s.DICT;
+    s.DICMulti=caps.capMulti>0?s.mCO2Multi/(caps.capMulti*1000):s.DICT;
+    s.DICB=caps.capBulk>0?s.mCO2B/(caps.capBulk*1000):s.DICT;
+    s._targetCarbonate=solveCarbonateState(s.DICT,Math.max(0,s.Lac-p.sub.lac),p);
+    s._emptyCarbonate=solveCarbonateState(s.DICEmpty,0,p);
+    s._singleCarbonate=solveCarbonateState(s.DICSingle,0,p);
+    s._multiCarbonate=solveCarbonateState(s.DICMulti,0,p);
+    s.CO2T=s._targetCarbonate.co2;
+    s.CO2Empty=s._emptyCarbonate.co2;
+    s.CO2Single=s._singleCarbonate.co2;
+    s.CO2Multi=s._multiCarbonate.co2;
+    s.HCO3T=s._targetCarbonate.hco3;
+    s.CO3T=s._targetCarbonate.co3;
+    s.co2AlphaT=s._targetCarbonate.alpha0;
+    s.co2AlphaEmpty=s._emptyCarbonate.alpha0;
+    s.co2AlphaSingle=s._singleCarbonate.alpha0;
+    s.co2AlphaMulti=s._multiCarbonate.alpha0;
+    s.CO2B=caps.capBulk>0?((s.CO2Empty*caps.capEmpty)+(s.CO2Single*caps.capSingle)+(s.CO2Multi*caps.capMulti))/Math.max(1e-9,caps.capBulk):s.CO2T;
+  }else{
+    s.DICT=caps.capT>0?s.mCO2T/(caps.capT*1000):p.CO2Initial;
+    s.DICEmpty=caps.capEmpty>0?s.mCO2Empty/(caps.capEmpty*1000):s.DICT;
+    s.DICSingle=caps.capSingle>0?s.mCO2Single/(caps.capSingle*1000):s.DICT;
+    s.DICMulti=caps.capMulti>0?s.mCO2Multi/(caps.capMulti*1000):s.DICT;
+    s.DICB=caps.capBulk>0?s.mCO2B/(caps.capBulk*1000):s.DICT;
+    s.CO2T=s.DICT;
+    s.CO2Empty=s.DICEmpty;
+    s.CO2Single=s.DICSingle;
+    s.CO2Multi=s.DICMulti;
+    s.CO2B=s.DICB;
+    s.HCO3T=Math.max(.05,Math.max(0,p.sub.bicarb||0)-Math.max(0,s.Lac-p.sub.lac));
+    s.CO3T=0;
+    s.co2AlphaT=1;
+    s.co2AlphaEmpty=1;
+    s.co2AlphaSingle=1;
+    s.co2AlphaMulti=1;
+  }
   s.pH=computePH(s,p);
   return s;
 }
@@ -1460,7 +1587,9 @@ function oxygenStress(o2,p){const th=Math.max(0,p.pasteurThreshold_uM||0); if(th
 function cellsAt(n0,t,p,capNL){if(!p.prolif)return n0; const th=t/60; if(th<=p.lag_h)return n0; const K=Math.max(n0,Math.max(1,p.carryingCellsPerNL||300)*Math.max(1e-9,capNL||p.volume_nL)); const r=Math.log(2)/Math.max(.1,p.dt_h); const x=Math.exp(clamp(r*(th-p.lag_h),-60,60)); return K*n0*x/(K+n0*(x-1));}
 function headEq(s,p){if(p.atmMode!=='closed')return p.O2eq; if(p.headspace_mL<=0)return 0; const kh=PHYS.kH_O2_37C_mM_atm*Math.exp(-.025*(p.T-37)); const po2=(Math.max(0,s.headO2||0)*1e-15*PHYS.R*(273.15+p.T))/(p.headspace_mL/1000); return Math.max(0,kh*po2*1000);}
 function co2HeadEq(s,p){if(p.pHBoundaryMode==='closed_headspace_mass_balance'&&p.atmMode==='closed'&&p.headspace_mL>0){const kh=PHYS.kH_CO2_37C_mM_atm*Math.exp(-.025*(p.T-37)); const pco2=(Math.max(0,s.headCO2||0)*1e-15*PHYS.R*(273.15+p.T))/(p.headspace_mL/1000); return Math.max(.001,kh*pco2);} return Math.max(.001,p.CO2Boundary);}
-function computePH(s,p){const dL=Math.max(0,s.Lac-p.sub.lac), co2=Math.max(.001,s.CO2T||p.CO2Initial||p.CO2eq), co20=Math.max(.001,p.CO2Initial||p.CO2eq); const b0=Math.max(0,p.sub.bicarb||0), pKa=6.103; if(b0>.5){const b=Math.max(.05,b0-dL); const hh0=pKa+Math.log10(Math.max(.05,b0)/co20); const hh=pKa+Math.log10(b/co2); const nonBicarbDrop=dL/Math.max(2,p.buffer*2.5); return clamp(p.pH0+(hh-hh0)-.20*nonBicarbDrop,0,14);} const lactateDrop=dL/Math.max(.1,p.buffer); const co2Drop=Math.log10(co2/co20); return clamp(p.pH0-lactateDrop-co2Drop,0,14);}
+function co2TransferCapacity(cap,alpha0){return cap>0?cap*1000/Math.max(1e-6,alpha0||0):0;}
+function computePHHeuristic(s,p){const dL=Math.max(0,s.Lac-p.sub.lac), co2=Math.max(.001,s.CO2T||p.CO2Initial||p.CO2eq), co20=Math.max(.001,p.CO2Initial||p.CO2eq); const b0=Math.max(0,p.sub.bicarb||0), pKa=carbonateConstants(p.T).pKa1; if(b0>.5){const b=Math.max(.05,b0-dL); const hh0=pKa+Math.log10(Math.max(.05,b0)/co20); const hh=pKa+Math.log10(b/co2); const nonBicarbDrop=dL/Math.max(2,p.buffer*2.5); return clamp(p.pH0+(hh-hh0)-.20*nonBicarbDrop,0,14);} const lactateDrop=dL/Math.max(.1,p.buffer); const co2Drop=Math.log10(co2/co20); return clamp(p.pH0-lactateDrop-co2Drop,0,14);}
+function computePH(s,p){if(p.pHModel==='carbonate_alkalinity')return s._targetCarbonate?.pH??solveCarbonateState(Number.isFinite(s.DICT)?s.DICT:(Number.isFinite(p.DICInitial)?p.DICInitial:carbonateBaseline(p).dic0),Math.max(0,(s.Lac||0)-(p.sub?.lac||0)),p).pH; return computePHHeuristic(s,p);}
 function status(s,p){if(s.O2T<=p.o2Threshold)return 'Hypoxia'; if(s.Glc<=p.glucoseFloor)return 'Glucose depleted'; if(s.Gln<=p.glutamineFloor)return 'Glutamine depleted'; if(s.pH<=p.pHFloor)return 'Acidic'; if(s.pH>=p.pHCeiling)return 'Alkaline'; return 'Viable';}
 function halfFromK(k){return k>0?Math.log(2)/k:Infinity;}
 function initialFlux(p,capT,capBulk,capOilE,capOilR,geom=geometryScales(p)){const baseBulkCaps=occupancyCapacities(p); const bulkRegime=resolveBulkOxygenRegime(p,effectiveHalfTime(p.dropHalf,geom.dropBulk,p.halfTimeMode),baseBulkCaps); const bulkCaps=bulkCapacitiesForMode(baseBulkCaps,bulkRegime.selectedMode); const kin=buildKinetics(p,{capT,capBulk,capOilE,capOilR,...bulkCaps},geom); const initHeadEq=headEq({headO2:p.headO2Initial},p); const grouped=bulkCountsForMode(p,bulkRegime.selectedMode,0); const demand=oxygenLimitedRate(p.targetCells,p.initialO2T,p)+oxygenLimitedRate(grouped.single,p.initialO2B,p)+oxygenLimitedRate(grouped.multi,p.initialO2B,p); const boundaryRes=capOilR>0?kin.GgasRes*(initHeadEq-p.initialO2Res):0; const boundaryDirect=capOilE>0?kin.GgasDirect*(initHeadEq-p.initialO2Oil):0; const localTarget=kin.GdropTarget*(p.initialO2Oil-p.initialO2T); const localSingle=kin.GdropSingle*(p.initialO2Oil-p.initialO2B); const localMulti=kin.GdropMulti*(p.initialO2Oil-p.initialO2B); const localEmpty=kin.GdropEmpty*(p.initialO2Oil-p.initialO2B); const mix=kin.Goil*(p.initialO2Res-p.initialO2Oil); return {demand,boundaryNet:boundaryRes+boundaryDirect,boundaryIntoLiquid:Math.max(0,boundaryRes)+Math.max(0,boundaryDirect),boundaryOutOfLiquid:Math.max(0,-boundaryRes)+Math.max(0,-boundaryDirect),localNet:localTarget+localSingle+localMulti,localIntoDroplets:Math.max(0,localTarget)+Math.max(0,localSingle)+Math.max(0,localMulti),localOutOfDroplets:Math.max(0,-localTarget)+Math.max(0,-localSingle)+Math.max(0,-localMulti),localIntoEmptyDroplets:Math.max(0,localEmpty),localOutOfEmptyDroplets:Math.max(0,-localEmpty),mix,bulkO2Regime:bulkRegime};}
@@ -1507,7 +1636,7 @@ function uniqueWarningsForResult(r){
   if(p.emulsionDepth_mm>6&&p.storageMode==='static_tube')warns.push({type:'warn',text:'Static emulsion depth is high for the selected vessel diameter; gas-boundary exchange is likely area-limited.'});
   if(p.storageMode==='static_tube'&&p.N>1e6)warns.push({type:'warn',text:'Large static droplet populations may develop center-to-edge oxygen gradients; validate with an oxygen sensor or use circulation/thin-layer storage.'});
   if(p.atmMode==='closed'&&r.mass?.o2ResidualPct>.1)warns.push({type:'warn',text:`Closed-system O₂ mass residual is ${fmt(r.mass.o2ResidualPct,3)}%; check fast exchange or solver settings.`});
-  if(r.mass?.closedCarbonBalance&&r.mass?.co2ResidualPct>.1)warns.push({type:'warn',text:`Tracked aqueous + headspace CO₂ residual is ${fmt(r.mass.co2ResidualPct,3)}%; check fast exchange or solver settings.`});
+  if(r.mass?.closedCarbonBalance&&r.mass?.co2ResidualPct>.1)warns.push({type:'warn',text:`${r.mass.trackedCarbonLabel||'Tracked aqueous + headspace CO₂'} residual is ${fmt(r.mass.co2ResidualPct,3)}%; check fast exchange or solver settings.`});
   return [...new Map(warns.map(w=>[w.type+'|'+w.text,w])).values()];
 }
 function buildExportPayload(r){
@@ -1527,7 +1656,7 @@ function buildExportPayload(r){
     rateTemperatureMode:p.rateTemperatureMode||null,
     transportModel:r.bulkO2Regime?.selectedMode||null,
     transportModelRecommendation:r.bulkO2Regime?.recommendedMode||r.bulkO2Regime?.selectedMode||null,
-    pHModel:'heuristic_bicarbonate_henderson_hasselbalch',
+    pHModel:p.pHModel||'heuristic_legacy',
     actualConductances:r.conductances||{},
     solverTolerances:r.solver?.settings||{},
     solverDiagnostics:r.solver||{},
@@ -1559,7 +1688,8 @@ function renderResult(r){
     ['Limiting factor',horizon?'none within horizon':r.limiter,'minimum endpoint'],
     ['Initial O₂',`${fmt(p.initialO2T,1)} µM`,`${fmt(p.initAqO2Pct,1)}% air saturation`],
     ['Endpoint pH',fmt(r.final.pH,3),'evaluated droplet'],
-    ['Endpoint CO₂',fmt(r.final.CO2T,3)+' mM','evaluated droplet'],
+    ['Endpoint CO₂*',fmt(r.final.CO2T,3)+' mM',p.pHModel==='carbonate_alkalinity'?'evaluated droplet dissolved CO₂ from DIC speciation':'evaluated droplet dissolved CO₂'],
+    ['pH model',p.pHModel.replaceAll('_',' '),p.pHModel==='carbonate_alkalinity'?'DIC + alkalinity + water + linear non-bicarbonate buffer':'legacy Henderson-Hasselbalch comparison mode'],
     ['pH boundary',p.pHBoundaryMode.replaceAll('_',' '),'bicarbonate/CO₂'],
     ['Rate source',p.cell.rateTier?('Tier '+p.cell.rateTier):'direct/default',p.cell.rateBasis||p.cell.estimateBasis||'embedded default'],
     ['P(target occupancy)',fmt(p.targetProbability*100,4)+'%',`K=${p.targetCells} at λ ${fmt(p.lambda,2)}`],
@@ -1599,9 +1729,9 @@ function renderResult(r){
     ['Geometry mode',r.geometry.notes],
     ['O₂ threshold',fmt(p.o2Threshold,3)+' µM',thresholdLabel(p)],
     ['Glucose / glutamine floors',fmt(p.glucoseFloor,3)+' / '+fmt(p.glutamineFloor,3)+' mM'],
-    ['CO₂ exchange half-time',fmt(r.effective.co2TargetHalf,1)+' min'],
+    ['CO₂ exchange half-time',fmt(r.effective.co2TargetHalf,1)+' min',p.pHModel==='carbonate_alkalinity'?'applied to dissolved CO₂* using frozen carbonate speciation over each accepted substep':'applied to dissolved CO₂'],
     ['Closed O₂ mass residual',p.atmMode==='closed'?fmt(r.mass.o2ResidualPct,4)+'%':'open boundary'],
-    ['Tracked aqueous + headspace CO₂ residual',r.mass.closedCarbonBalance?fmt(r.mass.co2ResidualPct,4)+'%':'not applicable',r.mass.closedCarbonBalance?'finite closed-headspace tracked-carbon balance; oil-phase CO₂ is not tracked':'external or replenished CO₂ boundary'],
+    [r.mass.trackedCarbonLabel||'Tracked aqueous + headspace CO₂ residual',r.mass.closedCarbonBalance?fmt(r.mass.co2ResidualPct,4)+'%':'not applicable',r.mass.closedCarbonBalance?(p.pHModel==='carbonate_alkalinity'?'finite closed-headspace DIC + headspace CO₂ balance; oil-phase CO₂ is not tracked':'finite closed-headspace dissolved CO₂ + headspace CO₂ balance; oil-phase CO₂ is not tracked'):'external or replenished CO₂ boundary'],
     ['Estimated / actual steps',`${fmt(r.solver.estimatedSteps,0)} / ${fmt(r.solver.acceptedSteps,0)}`,'pre-run estimate vs accepted steps'],
     ['Accepted dt min / median / max',`${fmt(r.solver.actualMinStep,4)} / ${fmt(r.solver.actualMedianStep,4)} / ${fmt(r.solver.actualMaxStep,4)} min`],
     ['Root iterations',fmt(r.solver.rootIterations,0),`budget ${fmt(r.solver.rootBudget,0)}`],

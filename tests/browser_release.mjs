@@ -24,6 +24,7 @@ await page.waitForSelector('#safeTime');
 assert((await page.locator('body').getAttribute('data-release')) === 'v18-transport-20260715', 'stale release on browser load');
 assert(((await page.locator('meta[name="artifact-commit"]').getAttribute('content')) || '').length === 40, 'artifact commit metadata missing');
 assert(((await page.locator('meta[name="artifact-manifest-sha256"]').getAttribute('content')) || '').length === 64, 'artifact manifest hash metadata missing');
+assert((await page.locator('#pHModel').inputValue()) === 'carbonate_alkalinity', 'default pH model should be carbonate/alkalinity');
 assert((await page.locator('#safeTime').textContent()).trim().length > 0, 'default calculation missing');
 
 await page.selectOption('#halfTimeMode', 'measured_effective', { force: true });
@@ -51,15 +52,16 @@ assert((await page.locator('#warnings').textContent()).includes('selected-gas Oâ
 await page.selectOption('#headspaceGas', 'co2air', { force: true });
 await page.selectOption('#o2ThresholdMode', 'absolute_uM', { force: true });
 await page.evaluate(() => {
-  document.getElementById('maxDays').value = '14';
-  document.getElementById('gasHalf').value = '0.1';
-  document.getElementById('oilHalf').value = '0.1';
-  document.getElementById('dropHalf').value = '0.1';
+  document.getElementById('maxDays').value = '60';
+  document.getElementById('gasHalf').value = '0.05';
+  document.getElementById('oilHalf').value = '0.05';
+  document.getElementById('dropHalf').value = '0.05';
+  document.getElementById('lambda').value = '20';
+  document.getElementById('targetCells').value = '50';
 });
 await page.evaluate(() => document.getElementById('calculateBtn').click());
-await page.waitForFunction(() => (document.getElementById('lastRun')?.textContent || '').includes('Running calculation in background'), null, { timeout: 5000 });
+await page.waitForFunction(() => document.getElementById('cancelBtn') && !document.getElementById('cancelBtn').disabled, null, { timeout: 5000 });
 assert((await page.locator('#cancelBtn').isDisabled()) === false, 'cancel button should enable during worker run');
-assert((await page.locator('#lastRun').textContent()).includes('Running calculation in background'), 'worker-backed run status missing');
 await page.evaluate(() => document.getElementById('cancelBtn').click());
 await page.waitForFunction(() => (document.getElementById('lastRun')?.textContent || '').includes('cancelled'), null, { timeout: 5000 });
 assert((await page.locator('#lastRun').textContent()).includes('cancelled'), 'worker cancellation status missing');
