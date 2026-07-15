@@ -32,21 +32,26 @@ The committed standalone artifact is generated deterministically from `src/stand
 Run regression checks with:
 
 ```bash
+npm run build:provenance
 npm run check:syntax
 npm test
 npm run test:browser
 npm run build
 npm run verify:artifact
 npm run verify:manifest
+npm run verify:provenance
 ```
 
 CI runs the same gate set on every push and pull request, and also fails if rebuilding the standalone artifact leaves tracked files dirty.
+
+Scientific source metadata is now exported to `data/parameter_provenance.json`, generated deterministically from the current source data and verified in CI.
 
 Supporting audit docs:
 
 - `MODEL_SPECIFICATION.md`
 - `VALIDATION.md`
 - `AUDIT_MANIFEST.json`
+- `data/parameter_provenance.json`
 
 ## Main controls
 

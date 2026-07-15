@@ -25,6 +25,7 @@ Audited release:
 - Deterministic low-demand, nominal, and high-demand scenario runs are available when stored metabolic-rate bounds exist for the selected line. These are bound sweeps, not probabilistic intervals.
 - The diagnostics tab can now fit pasted O₂ time series against selected transport half-times for the exact current setup, reporting residuals, profile-style ranges, local parameter correlation for two-parameter fits, and explicit identifiability warnings when the data are weak.
 - JSON exports now include reproducibility metadata: audited release, audited source commit, audit-manifest SHA-256, raw inputs, effective parameters, parameter provenance, actual conductances, solver settings, warnings, and deterministic scenario outputs.
+- Scientific source metadata for cell lines, media, and oils is now emitted to `data/parameter_provenance.json` with explicit units, source lists, proxy notes, confidence tiers, and conversion notes. This improves auditability, but it still reflects the same underlying literature-quality limits as the source database itself.
 - Manual calculations and sweeps now use a background Web Worker where supported, so long runs can be cancelled instead of locking the UI thread.
 
 ## Remaining important limitations

@@ -8,7 +8,9 @@ const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
 const limitations = fs.readFileSync(path.join(__dirname, '..', 'ACCURACY_AND_LIMITATIONS.md'), 'utf8');
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
 const ciWorkflow = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'ci.yml'), 'utf8');
+const parameterProvenance = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'parameter_provenance.json'), 'utf8'));
 const manifest = loadManifest(path.join(__dirname, '..'));
+const { buildParameterProvenance } = require('../scripts/parameter_provenance_utils');
 const start = html.indexOf('const DATA=');
 const end = html.indexOf("window.addEventListener('resize'");
 if (start < 0 || end < 0) throw new Error('Could not locate model code in HTML source.');
@@ -451,10 +453,30 @@ run('CI workflow keeps the audited syntax, test, build, and clean-tree gates', (
     'npm run build',
     'npm run verify:artifact',
     'npm run verify:manifest',
+    'npm run verify:provenance',
     'git diff --exit-code',
   ];
   for (const fragment of requiredWorkflowFragments) {
     assert(ciWorkflow.includes(fragment), `CI workflow is missing required gate: ${fragment}`);
+  }
+});
+
+run('parameter provenance matches current source data and covers all cell/media/oil entities', () => {
+  const expected = buildParameterProvenance(path.join(__dirname, '..'));
+  assert.deepStrictEqual(parameterProvenance, expected, 'parameter provenance file should exactly match the current source-derived payload');
+  assert.deepStrictEqual(Object.keys(parameterProvenance.cellLines).sort(), Object.keys(DATA.cellLines).sort(), 'cell-line provenance keys should match source data');
+  assert.deepStrictEqual(Object.keys(parameterProvenance.media).sort(), Object.keys(DATA.media).sort(), 'medium provenance keys should match source data');
+  assert.deepStrictEqual(Object.keys(parameterProvenance.oils).sort(), Object.keys(DATA.oils).sort(), 'oil provenance keys should match source data');
+  for (const group of ['cellLines', 'media', 'oils']) {
+    for (const entity of Object.values(parameterProvenance[group])) {
+      assert(Array.isArray(entity.records) && entity.records.length > 0, `${group} ${entity.id} should have provenance records`);
+      for (const record of entity.records) {
+        for (const key of parameterProvenance.requiredFields) {
+          assert(Object.prototype.hasOwnProperty.call(record, key), `${group} ${entity.id} record ${record.parameter} is missing field ${key}`);
+        }
+        assert(record.unit, `${group} ${entity.id} record ${record.parameter} should declare a unit`);
+      }
+    }
   }
 });
 

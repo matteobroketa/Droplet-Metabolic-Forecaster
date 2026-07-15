@@ -11,7 +11,7 @@ node scripts/check_syntax.js
 node tests/audit_regression.js
 ```
 
-Current minimum enforced checks: `67`
+Current minimum enforced checks: `68`
 
 The regression suite covers:
 
@@ -34,6 +34,7 @@ The regression suite covers:
 - monotonic pH protection from increased non-bicarbonate buffer capacity
 - deterministic low/nominal/high demand scenario generation
 - calibration parsing, synthetic half-time recovery, and calibration export metadata
+- deterministic source-backed parameter-provenance generation and coverage for cell lines, media, and oils
 - export reproducibility metadata
 - progress-hook solver equivalence
 - preset and vessel synchronization
@@ -41,6 +42,7 @@ The regression suite covers:
 - solver-budget protection
 - deterministic artifact assembly from the source template plus ordered `src/app` modules
 - CI workflow enforcement of syntax, regression, browser, build, manifest, and clean-rebuild gates
+- machine-readable provenance verification for scientific source data
 
 ## Browser smoke coverage
 

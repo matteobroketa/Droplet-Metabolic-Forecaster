@@ -14,7 +14,7 @@ function sha256(relPath) {
 if (!manifest.release) throw new Error('Manifest release missing.');
 if (!manifest.gitCommit) throw new Error('Manifest gitCommit missing.');
 if (!manifest.files || typeof manifest.files !== 'object') throw new Error('Manifest files map missing.');
-if ((manifest.expectedMinimumChecks || 0) < 67) throw new Error('Manifest expectedMinimumChecks is stale.');
+if ((manifest.expectedMinimumChecks || 0) < 68) throw new Error('Manifest expectedMinimumChecks is stale.');
 
 const requiredFiles = [
   'metabolic_depletion_forecaster.html',
@@ -24,13 +24,18 @@ const requiredFiles = [
   'ACCURACY_AND_LIMITATIONS.md',
   'MODEL_SPECIFICATION.md',
   'VALIDATION.md',
+  'data/parameter_provenance.json',
   'package.json',
   '.github/workflows/ci.yml',
   'scripts/build.js',
+  'scripts/build_parameter_provenance.js',
   'scripts/check_syntax.js',
+  'scripts/parameter_provenance_utils.js',
   'scripts/verify_artifact.js',
   'scripts/verify_manifest.js',
+  'scripts/verify_parameter_provenance.js',
   'scripts/release_utils.js',
+  'scripts/source_data_utils.js',
   'src/standalone_artifact.template.html',
   'src/app/00_model_and_solver.js',
   'src/app/10_ui_and_exports.js',

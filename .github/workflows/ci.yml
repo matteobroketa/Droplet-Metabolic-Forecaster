@@ -27,6 +27,8 @@ jobs:
         run: npm run test:browser
       - name: Rebuild standalone artifact
         run: npm run build
+      - name: Verify parameter provenance
+        run: npm run verify:provenance
       - name: Verify release artifact
         run: npm run verify:artifact
       - name: Verify audit manifest

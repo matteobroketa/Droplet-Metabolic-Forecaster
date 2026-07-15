@@ -102,6 +102,22 @@ JSON exports include:
 - solver tolerances and diagnostics
 - warnings and deterministic scenario summaries
 
+## Parameter provenance
+
+Machine-readable source metadata is committed in `data/parameter_provenance.json`. The file is generated deterministically from the current source cell-line, medium, and oil records and includes, for every exported parameter:
+
+- parameter name
+- value
+- unit
+- source reference list
+- exact-line versus proxy note
+- experimental-condition metadata where available
+- conversion or uncertainty note
+- confidence tier
+- free-text notes
+
+This provenance artifact is verified in CI against the current source data so committed scientific metadata cannot silently drift from the model defaults.
+
 ## Carbon accounting
 
 Tracked carbon currently includes:
