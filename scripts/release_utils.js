@@ -2,6 +2,10 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const APP_SCRIPT_PLACEHOLDER = '__ARTIFACT_APP_SCRIPT__';
+const SOURCE_SCRIPT_ROOTS = [
+  path.join('src', 'model'),
+  path.join('src', 'ui'),
+];
 
 function stableArtifactManifestHash(manifest) {
   const clone = JSON.parse(JSON.stringify(manifest));
@@ -17,17 +21,17 @@ function loadManifest(root) {
 }
 
 function loadAppScript(root) {
-  const appDir = path.join(root, 'src', 'app');
-  if (!fs.existsSync(appDir)) {
-    throw new Error('Artifact app source directory missing: src/app');
-  }
-  const appSourceFiles = fs
-    .readdirSync(appDir)
-    .filter((name) => name.endsWith('.js'))
-    .sort()
-    .map((name) => path.join(appDir, name));
+  const appSourceFiles = SOURCE_SCRIPT_ROOTS.flatMap((relDir) => {
+    const absDir = path.join(root, relDir);
+    if (!fs.existsSync(absDir)) return [];
+    return fs
+      .readdirSync(absDir)
+      .filter((name) => name.endsWith('.js'))
+      .sort()
+      .map((name) => path.join(absDir, name));
+  });
   if (!appSourceFiles.length) {
-    throw new Error('Artifact app source directory is empty: src/app');
+    throw new Error(`Artifact source directories are empty or missing: ${SOURCE_SCRIPT_ROOTS.join(', ')}`);
   }
   const appScript = appSourceFiles
     .map((filePath) => {
@@ -64,5 +68,6 @@ module.exports = {
   loadManifest,
   loadAppScript,
   renderArtifact,
+  SOURCE_SCRIPT_ROOTS,
   stableArtifactManifestHash,
 };

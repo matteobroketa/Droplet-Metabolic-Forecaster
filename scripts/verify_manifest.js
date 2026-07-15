@@ -44,10 +44,10 @@ const requiredFiles = [
   'scripts/verify_parameter_provenance.js',
   'scripts/release_utils.js',
   'scripts/source_data_utils.js',
-  'src/app/00_data.generated.js',
+  'src/model/00_data.generated.js',
   'src/standalone_artifact.template.html',
-  'src/app/00_model_and_solver.js',
-  'src/app/10_ui_and_exports.js',
+  'src/model/00_model_and_solver.js',
+  'src/ui/10_ui_and_exports.js',
 ];
 
 for (const relPath of requiredFiles) {

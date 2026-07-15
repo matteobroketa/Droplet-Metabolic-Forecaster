@@ -17,4 +17,4 @@ const manifest = loadManifest(root);
 const { html, appSourceFiles } = renderArtifact(root, manifest);
 fs.writeFileSync(artifact, html);
 
-console.log(`Build passed: regenerated standalone artifact from src/standalone_artifact.template.html and ${appSourceFiles.length} src/app module(s) for ${manifest.release}.`);
+console.log(`Build passed: regenerated standalone artifact from src/standalone_artifact.template.html and ${appSourceFiles.length} ordered source module(s) for ${manifest.release}.`);

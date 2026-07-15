@@ -9,7 +9,7 @@ const limitations = fs.readFileSync(path.join(__dirname, '..', 'ACCURACY_AND_LIM
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
 const ciWorkflow = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'ci.yml'), 'utf8');
 const parameterProvenance = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'parameter_provenance.json'), 'utf8'));
-const generatedDataBundle = fs.readFileSync(path.join(__dirname, '..', 'src', 'app', '00_data.generated.js'), 'utf8');
+const generatedDataBundle = fs.readFileSync(path.join(__dirname, '..', 'src', 'model', '00_data.generated.js'), 'utf8');
 const manifest = loadManifest(path.join(__dirname, '..'));
 const { buildParameterProvenance } = require('../scripts/parameter_provenance_utils');
 const { loadSourceData, renderModelDataBundle } = require('../scripts/source_data_utils');
@@ -474,10 +474,11 @@ function baseFormValues(overrides = {}) {
   };
 }
 
-run('artifact render assembles src/app modules and clears the script placeholder', () => {
+run('artifact render assembles ordered source modules and clears the script placeholder', () => {
   const { html: renderedHtml, appSourceFiles } = renderArtifact(path.join(__dirname, '..'), manifest);
-  assert(appSourceFiles.includes('src/app/00_model_and_solver.js'), 'artifact render should include model/solver source module');
-  assert(appSourceFiles.includes('src/app/10_ui_and_exports.js'), 'artifact render should include UI/export source module');
+  assert(appSourceFiles.includes('src/model/00_data.generated.js'), 'artifact render should include generated runtime data bundle');
+  assert(appSourceFiles.includes('src/model/00_model_and_solver.js'), 'artifact render should include model/solver source module');
+  assert(appSourceFiles.includes('src/ui/10_ui_and_exports.js'), 'artifact render should include UI/export source module');
   assert(renderedHtml.includes('function captureRawInputs(){'), 'assembled artifact should include UI/export script content');
   assert(!renderedHtml.includes('__ARTIFACT_APP_SCRIPT__'), 'assembled artifact should not keep the script placeholder');
 });

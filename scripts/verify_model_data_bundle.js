@@ -3,10 +3,10 @@ const path = require('path');
 const { renderModelDataBundle } = require('./source_data_utils');
 
 const root = path.join(__dirname, '..');
-const bundlePath = path.join(root, 'src', 'app', '00_data.generated.js');
+const bundlePath = path.join(root, 'src', 'model', '00_data.generated.js');
 
 if (!fs.existsSync(bundlePath)) {
-  throw new Error('Missing src/app/00_data.generated.js');
+  throw new Error('Missing src/model/00_data.generated.js');
 }
 
 const expected = renderModelDataBundle(root);
