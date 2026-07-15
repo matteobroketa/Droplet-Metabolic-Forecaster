@@ -10,7 +10,7 @@ Primary regression command:
 node tests/audit_regression.js
 ```
 
-Current minimum enforced checks: `62`
+Current minimum enforced checks: `64`
 
 The regression suite covers:
 
@@ -32,6 +32,7 @@ The regression suite covers:
 - carbonate closed-headspace tracked-carbon conservation
 - monotonic pH protection from increased non-bicarbonate buffer capacity
 - deterministic low/nominal/high demand scenario generation
+- calibration parsing, synthetic half-time recovery, and calibration export metadata
 - export reproducibility metadata
 - progress-hook solver equivalence
 - preset and vessel synchronization
@@ -53,6 +54,7 @@ The browser smoke test verifies:
 - default calculation renders
 - worker-backed long runs expose cancel status
 - measured-effective mode renders diagnostics
+- calibration UI runs and renders a best-fit summary
 - incompatible finite-headspace carbon mode blocks calculation
 - anoxic selected-gas thresholds are rejected
 - no rendered `NaN` or `Infinity`
@@ -63,4 +65,5 @@ The browser smoke test verifies:
 - The default pH layer now uses carbonate/alkalinity chemistry, but it is still not benchmarked against a full explicit-medium ionic-strength solver with oil-phase CO₂.
 - Oil-phase CO2 is not yet included in the tracked-carbon residual.
 - Bulk nutrients remain mean-field even when oxygen uses grouped droplet states.
+- Calibration currently fits only transport half-times from O₂ series; it does not yet provide joint identifiability against metabolic-rate uncertainty or pH data.
 - The standalone artifact is still monolithic; build currently verifies the committed artifact rather than regenerating it from split source modules.

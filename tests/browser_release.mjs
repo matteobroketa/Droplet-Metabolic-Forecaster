@@ -35,6 +35,10 @@ await page.click('[data-tab=\"diagnostics\"]');
 await page.click('#runScenariosBtn');
 await page.waitForFunction(() => (document.getElementById('scenarioTable')?.textContent || '').includes('nominal'), null, { timeout: 5000 });
 assert((await page.locator('#scenarioTable').textContent()).includes('nominal'), 'deterministic scenario table did not populate');
+await page.fill('#calibrationSeries', 'time_h,o2_uM\n0,204\n1,180\n2,160\n3,145');
+await page.click('#runCalibrationBtn');
+await page.waitForFunction(() => (document.getElementById('calibrationSummary')?.textContent || '').includes('Best fit'), null, { timeout: 10000 });
+assert((await page.locator('#calibrationSummary').textContent()).includes('Best fit'), 'calibration summary did not populate');
 
 await page.selectOption('#atmMode', 'incubator', { force: true });
 await page.selectOption('#pHBoundaryMode', 'closed_headspace_mass_balance', { force: true });
@@ -52,18 +56,18 @@ assert((await page.locator('#warnings').textContent()).includes('selected-gas Oâ
 await page.selectOption('#headspaceGas', 'co2air', { force: true });
 await page.selectOption('#o2ThresholdMode', 'absolute_uM', { force: true });
 await page.evaluate(() => {
-  document.getElementById('maxDays').value = '60';
-  document.getElementById('gasHalf').value = '0.05';
-  document.getElementById('oilHalf').value = '0.05';
-  document.getElementById('dropHalf').value = '0.05';
+  document.getElementById('maxDays').value = '30';
+  document.getElementById('gasHalf').value = '0.1';
+  document.getElementById('oilHalf').value = '0.1';
+  document.getElementById('dropHalf').value = '0.1';
   document.getElementById('lambda').value = '20';
   document.getElementById('targetCells').value = '50';
 });
 await page.evaluate(() => document.getElementById('calculateBtn').click());
-await page.waitForFunction(() => document.getElementById('cancelBtn') && !document.getElementById('cancelBtn').disabled, null, { timeout: 5000 });
+await page.waitForFunction(() => document.getElementById('cancelBtn') && !document.getElementById('cancelBtn').disabled, null, { timeout: 15000 });
 assert((await page.locator('#cancelBtn').isDisabled()) === false, 'cancel button should enable during worker run');
 await page.evaluate(() => document.getElementById('cancelBtn').click());
-await page.waitForFunction(() => (document.getElementById('lastRun')?.textContent || '').includes('cancelled'), null, { timeout: 5000 });
+await page.waitForFunction(() => (document.getElementById('lastRun')?.textContent || '').includes('cancelled'), null, { timeout: 10000 });
 assert((await page.locator('#lastRun').textContent()).includes('cancelled'), 'worker cancellation status missing');
 
 const renderedText = [

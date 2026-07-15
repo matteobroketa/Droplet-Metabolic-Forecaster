@@ -169,6 +169,14 @@
         <div class="table-wrap"><table id="scenarioTable"><thead><tr><th>Scenario</th><th>Safe window</th><th>Limiter</th><th>Final O₂</th><th>Final pH</th></tr></thead><tbody><tr><td colspan="5">Run a calculation to populate deterministic rate scenarios.</td></tr></tbody></table></div>
         <div class="section-title" style="margin-top:20px"><div><h2>Sensitivity sweep</h2><p>Safe-window change across droplet volume and λ, with the current reservoir settings.</p></div><button class="btn slim" id="runSweepBtn" type="button">Run sweep</button></div>
         <div class="table-wrap"><table id="sweepTable"><thead><tr><th>Volume</th><th>λ</th><th>Target cells</th><th>Safe window</th><th>Limiter</th></tr></thead><tbody><tr><td colspan="5">Run a sweep to populate this table.</td></tr></tbody></table></div>
+        <div class="section-title" style="margin-top:20px"><div><h2>Calibration</h2><p>Fit measured O₂ time series to transport half-times for the current physical setup.</p></div><button class="btn slim" id="runCalibrationBtn" type="button">Run calibration</button></div>
+        <div class="grid two">
+          <div class="field"><label for="calibrationObservable">Observed series</label><select id="calibrationObservable"><option value="O2T" selected>target droplet O₂</option><option value="O2B">bulk droplet O₂</option><option value="O2Oil">emulsion oil O₂</option><option value="O2Res">reservoir oil O₂</option></select><small>Select the state matched to the uploaded or pasted measurements.</small></div>
+          <div class="field"><label for="calibrationFitMode">Fit parameter(s)</label><select id="calibrationFitMode"><option value="dropHalf" selected>droplet half-time</option><option value="oilHalf">oil-mix half-time</option><option value="gasHalf">gas half-time</option><option value="dropHalf+oilHalf">droplet + oil half-times</option></select><small>Two-parameter fits report likelihood-weighted local correlation and identifiability warnings.</small></div>
+        </div>
+        <div class="field" style="margin-top:14px"><label for="calibrationSeries">Measured O₂ series</label><textarea id="calibrationSeries" rows="7" placeholder="time_h,o2_uM&#10;0,204&#10;1,172&#10;2,141"></textarea><small>Paste CSV or whitespace-separated pairs. First column is time in hours, second is observed O₂ in µM.</small></div>
+        <div id="calibrationSummary" class="notice" style="margin-top:14px">Paste a measured O₂ series and run calibration to fit transport half-times for the current setup.</div>
+        <div class="table-wrap" style="margin-top:14px"><table id="calibrationTable"><thead><tr><th>Time</th><th>Observed O₂</th><th>Predicted O₂</th><th>Residual</th></tr></thead><tbody><tr><td colspan="4">Run calibration to populate residuals.</td></tr></tbody></table></div>
       </section>
 
       <section id="tab-references" class="tab-content">
@@ -681,7 +689,7 @@ function hardValidateInputs(p){
   return invalid;
 }
 function initUI(){groupOptions($('#cellLine'),DATA.cellLines); groupOptions($('#medium'),DATA.media,o=>o.glc!=null?` (${fmt(o.glc,1)} mM glucose)`:o.id==='custom_medium'?' — specify values':''); $('#oilType').innerHTML=Object.values(DATA.oils).map(o=>`<option value="${o.id}">${o.name} (${fmt(o.capacityRatio,1)}× O₂ capacity)</option>`).join(''); renderAdditives(); renderRefs(); bind(); loadState(); updateDynamicUI(); runAndRender();}
-function bind(){document.addEventListener('input',e=>{if(e.target.matches('input,select'))debouncedUpdate()}); document.addEventListener('change',e=>{if(e.target.matches('input,select'))debouncedUpdate()}); $$('.tab').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab))); $$('[data-preset]').forEach(b=>b.addEventListener('click',()=>applyPreset(b.dataset.preset))); $('#calculateBtn').addEventListener('click',runAndRender); $('#cancelBtn').addEventListener('click',()=>cancelActiveWorkerJob('Background run cancelled.')); $('#themeBtn').addEventListener('click',toggleTheme); $('#helpBtn').addEventListener('click',()=>$('#helpDialog').classList.add('open')); $('#closeHelpBtn').addEventListener('click',()=>$('#helpDialog').classList.remove('open')); $('#helpDialog').addEventListener('click',e=>{if(e.target.id==='helpDialog')e.currentTarget.classList.remove('open')}); $('#equationsBtn').addEventListener('click',()=>$('#equationsDialog').classList.add('open')); $('#closeEquationsBtn').addEventListener('click',()=>$('#equationsDialog').classList.remove('open')); $('#equationsDialog').addEventListener('click',e=>{if(e.target.id==='equationsDialog')e.currentTarget.classList.remove('open')}); $('#resetBtn').addEventListener('click',()=>{try{localStorage.removeItem(STATE_KEY)}catch(e){} location.reload()}); $('#timeline').addEventListener('mousemove',chartHover); $('#timeline').addEventListener('mouseleave',()=>$('#chartTip').style.display='none'); $('#exportCsvBtn').addEventListener('click',exportCSV); $('#exportJsonBtn').addEventListener('click',exportJSON); $('#downloadDataBtn').addEventListener('click',downloadData); $('#savePngBtn').addEventListener('click',savePNG); $('#copySummaryBtn').addEventListener('click',copySummary); $('#runSweepBtn').addEventListener('click',runSweep); $('#runScenariosBtn').addEventListener('click',runScenarios); $('#printBtn').addEventListener('click',()=>print()); $('#storageMode').addEventListener('change',applyModePreset); $('#vesselPreset').addEventListener('change',()=>{syncVesselControls('main');applyVesselPreset();}); $('#vesselPresetEnv')?.addEventListener('change',()=>{syncVesselControls('env');applyVesselPreset();}); $('#cellLine').addEventListener('change',()=>{const c=DATA.cellLines[$('#cellLine').value]; if(c){$('#doublingTime').value=c.dt||24; $('#lagPhase').value=c.lag||0;}});}
+function bind(){document.addEventListener('input',e=>{if(e.target.matches('input,select'))debouncedUpdate()}); document.addEventListener('change',e=>{if(e.target.matches('input,select'))debouncedUpdate()}); $$('.tab').forEach(b=>b.addEventListener('click',()=>setTab(b.dataset.tab))); $$('[data-preset]').forEach(b=>b.addEventListener('click',()=>applyPreset(b.dataset.preset))); $('#calculateBtn').addEventListener('click',runAndRender); $('#cancelBtn').addEventListener('click',()=>cancelActiveWorkerJob('Background run cancelled.')); $('#themeBtn').addEventListener('click',toggleTheme); $('#helpBtn').addEventListener('click',()=>$('#helpDialog').classList.add('open')); $('#closeHelpBtn').addEventListener('click',()=>$('#helpDialog').classList.remove('open')); $('#helpDialog').addEventListener('click',e=>{if(e.target.id==='helpDialog')e.currentTarget.classList.remove('open')}); $('#equationsBtn').addEventListener('click',()=>$('#equationsDialog').classList.add('open')); $('#closeEquationsBtn').addEventListener('click',()=>$('#equationsDialog').classList.remove('open')); $('#equationsDialog').addEventListener('click',e=>{if(e.target.id==='equationsDialog')e.currentTarget.classList.remove('open')}); $('#resetBtn').addEventListener('click',()=>{try{localStorage.removeItem(STATE_KEY)}catch(e){} location.reload()}); $('#timeline').addEventListener('mousemove',chartHover); $('#timeline').addEventListener('mouseleave',()=>$('#chartTip').style.display='none'); $('#exportCsvBtn').addEventListener('click',exportCSV); $('#exportJsonBtn').addEventListener('click',exportJSON); $('#downloadDataBtn').addEventListener('click',downloadData); $('#savePngBtn').addEventListener('click',savePNG); $('#copySummaryBtn').addEventListener('click',copySummary); $('#runSweepBtn').addEventListener('click',runSweep); $('#runScenariosBtn').addEventListener('click',runScenarios); $('#runCalibrationBtn')?.addEventListener('click',runCalibration); $('#printBtn').addEventListener('click',()=>print()); $('#storageMode').addEventListener('change',applyModePreset); $('#vesselPreset').addEventListener('change',()=>{syncVesselControls('main');applyVesselPreset();}); $('#vesselPresetEnv')?.addEventListener('change',()=>{syncVesselControls('env');applyVesselPreset();}); $('#cellLine').addEventListener('change',()=>{const c=DATA.cellLines[$('#cellLine').value]; if(c){$('#doublingTime').value=c.dt||24; $('#lagPhase').value=c.lag||0;}});}
 let timer=null; function debouncedUpdate(){updateDynamicUI(); saveState(); clearTimeout(timer); timer=setTimeout(()=>{const p=gatherParams(); if(!(p.invalid&&p.invalid.length)&&p.estimatedWorkload&&p.estimatedWorkload.estimatedSteps>500000){$('#lastRun').textContent=`Auto-rerun skipped: estimated solver workload is about ${fmt(p.estimatedWorkload.estimatedSteps,0)} accepted sub-steps. Press Calculate.`; return;} runAndRender();},180)}
 function setTab(id){$$('.tab').forEach(b=>b.classList.toggle('active',b.dataset.tab===id)); $$('.tab-content').forEach(c=>c.classList.toggle('active',c.id===`tab-${id}`)); saveState();}
 function toggleTheme(){const dark=document.documentElement.dataset.theme!=='dark'; document.documentElement.dataset.theme=dark?'dark':'light'; $('#themeBtn').textContent=dark?'Light mode':'Dark mode'; if(window.lastResult)drawChart(window.lastResult); saveState();}
@@ -697,7 +705,7 @@ function reservoirOilVolume_uL(){return Math.max(0,(Number($('#residualOil')?.va
 function phaseVolumes(){const Vemul_uL=Math.max(.001,emulsionVolume_uL()); const aqueousFrac=clamp((Number($('#aqueousFraction')?.value)||0)/100,.001,.95); const Vaq_uL=Vemul_uL*aqueousFrac; const VoilEmul_uL=Math.max(0,Vemul_uL-Vaq_uL); const residualOil_uL=reservoirOilVolume_uL(); const totalOil_uL=VoilEmul_uL+residualOil_uL; const liquid_uL=Vemul_uL+residualOil_uL; return {Vemul_uL,aqueousFrac,Vaq_uL,VoilEmul_uL,residualOil_uL,totalOil_uL,liquid_uL};}
 function captureRawInputs(){
   const raw={};
-  $$('input,select').forEach(el=>{
+  $$('input,select,textarea').forEach(el=>{
     if(!el||!el.id)return;
     raw[el.id]=el.type==='checkbox'?!!el.checked:String(el.value??'');
   });
@@ -767,6 +775,11 @@ self.onmessage=(event)=>{
       self.postMessage({type:'result',jobId,kind,result:{rows}});
       return;
     }
+    if(kind==='calibration'){
+      const result=runCalibrationFit(payload.params,payload.config,progress);
+      self.postMessage({type:'result',jobId,kind,result});
+      return;
+    }
     throw new Error('Unknown worker job: '+kind);
   }catch(error){
     self.postMessage({type:'error',jobId,kind,error:String(error&&error.stack?error.stack:error)});
@@ -775,7 +788,7 @@ self.onmessage=(event)=>{
 }
 function workerSupported(){return typeof Worker==='function'&&!!workerModelSource();}
 function cleanupWorkerJob(){if(!activeWorkerJob)return; try{activeWorkerJob.worker.terminate();}catch(e){} try{URL.revokeObjectURL(activeWorkerJob.url);}catch(e){} activeWorkerJob=null;}
-function setWorkerRunState(running,progressText=''){const cancel=$('#cancelBtn'),calc=$('#calculateBtn'),sweep=$('#runSweepBtn'),scenarios=$('#runScenariosBtn'); if(cancel)cancel.disabled=!running; if(calc)calc.disabled=running; if(sweep)sweep.disabled=running; if(scenarios)scenarios.disabled=running; $('#progressNote').textContent=progressText||'';}
+function setWorkerRunState(running,progressText=''){const cancel=$('#cancelBtn'),calc=$('#calculateBtn'),sweep=$('#runSweepBtn'),scenarios=$('#runScenariosBtn'),calibration=$('#runCalibrationBtn'); if(cancel)cancel.disabled=!running; if(calc)calc.disabled=running; if(sweep)sweep.disabled=running; if(scenarios)scenarios.disabled=running; if(calibration)calibration.disabled=running; $('#progressNote').textContent=progressText||'';}
 function cancelActiveWorkerJob(message='Background run cancelled.'){if(!activeWorkerJob)return; cleanupWorkerJob(); setWorkerRunState(false,''); $('#lastRun').textContent=message;}
 function startWorkerJob(kind,payload,{startText,onResult,onProgress,onError}={}){
   if(!workerSupported())return false;
@@ -801,6 +814,7 @@ function startWorkerJob(kind,payload,{startText,onResult,onProgress,onError}={})
 function formatWorkerProgress(kind,progress){
   if(kind==='simulate')return `Worker progress ${fmt((progress.fraction||0)*100,0)}% · ${fmt(progress.acceptedSteps||0,0)} accepted steps`;
   if(kind==='sweep')return `Sweep progress ${fmt((progress.fraction||0)*100,0)}% · ${fmt(progress.done||0,0)}/${fmt(progress.total||0,0)} cases`;
+  if(kind==='calibration')return `Calibration progress ${fmt((progress.fraction||0)*100,0)}% · ${fmt(progress.done||0,0)}/${fmt(progress.total||0,0)} fits`;
   return 'Worker running…';
 }
 function liquidVolume_uL(){return phaseVolumes().liquid_uL;}
@@ -1096,12 +1110,141 @@ function buildRateScenarioResults(base){
     return scenarioResultSummary(base,ratesInfo,result,spec.id);
   });
 }
+function parseCalibrationSeries(text){
+  const lines=String(text||'').split(/\r?\n/).map(line=>line.trim()).filter(Boolean);
+  const rows=[];
+  for(const line of lines){
+    if(/^time/i.test(line))continue;
+    const parts=line.split(/[\s,;\t]+/).filter(Boolean);
+    if(parts.length<2)throw new Error(`Calibration row "${line}" must contain time_h and O2_uM.`);
+    const time_h=Number(parts[0]), observed=Number(parts[1]);
+    if(!Number.isFinite(time_h)||!Number.isFinite(observed))throw new Error(`Calibration row "${line}" contains a non-finite value.`);
+    if(time_h<0)throw new Error('Calibration times must be nonnegative.');
+    rows.push({time_h,observed});
+  }
+  rows.sort((a,b)=>a.time_h-b.time_h);
+  for(let i=1;i<rows.length;i++)if(rows[i].time_h<=rows[i-1].time_h)throw new Error('Calibration times must be strictly increasing.');
+  if(rows.length<3)throw new Error('Calibration requires at least three timepoints.');
+  return rows;
+}
+function calibrationObservableLabel(key){return ({O2T:'target droplet O₂',O2B:'bulk droplet O₂',O2Oil:'emulsion oil O₂',O2Res:'reservoir oil O₂'})[key]||key;}
+function interpolateObservable(series,timeMin,key){
+  if(!series.length)return NaN;
+  if(timeMin<=series[0].t)return Number(series[0][key]);
+  for(let i=1;i<series.length;i++){
+    const a=series[i-1], b=series[i];
+    if(timeMin<=b.t){
+      const span=Math.max(1e-9,b.t-a.t), frac=(timeMin-a.t)/span;
+      return Number(a[key])+(Number(b[key])-Number(a[key]))*frac;
+    }
+  }
+  return Number(series[series.length-1][key]);
+}
+function calibrationGridForParameter(current,count=19){
+  const center=Math.max(0.05,Number.isFinite(current)?current:1);
+  const lo=Math.max(0.05,center/16), hi=Math.max(lo*1.01,center*16);
+  return Array.from({length:count},(_,i)=>Math.exp(Math.log(lo)+(Math.log(hi)-Math.log(lo))*i/Math.max(1,count-1)));
+}
+function calibrationParameterKeys(fitMode){return fitMode==='dropHalf+oilHalf'?['dropHalf','oilHalf']:[fitMode||'dropHalf'];}
+function calibrationComparisonThreshold(n,k,bestSSE){const dof=Math.max(1,n-k); return bestSSE*(1+3.84/dof);}
+function runCalibrationFit(baseParams,config,progressCb=()=>{}){
+  const fitMode=config?.fitMode||'dropHalf';
+  const observable=config?.observable||'O2T';
+  const series=config?.series||[];
+  const keys=calibrationParameterKeys(fitMode);
+  const timesMin=series.map(row=>row.time_h*60);
+  const inferredStep=series.length>1?Math.max(0.05,Math.min(5,...series.slice(1).map((row,idx)=>Math.max(0.05,(row.time_h-series[idx].time_h)*60/4)))):0.5;
+  const calibrationHorizonDays=Math.max(0.01,Math.max(...series.map(row=>row.time_h))/24+0.01);
+  const makeParams=(updates={})=>({ ...baseParams, ...updates, estimatedWorkload:null, chartEveryMin:inferredStep, logStep:Math.max(1,inferredStep), maxDays:calibrationHorizonDays });
+  const grids=keys.map(key=>calibrationGridForParameter(baseParams[key],keys.length===2?11:19));
+  const total=grids.reduce((acc,g)=>acc*g.length,1);
+  let done=0;
+  const fits=[];
+  const sigmaFloor=1e-12;
+  const evalFit=(values)=>{
+    const updates=Object.fromEntries(keys.map((key,idx)=>[key,values[idx]]));
+    const params=makeParams(updates);
+    const result=Engine.simulate(params);
+    const residuals=series.map(row=>{
+      const predicted=interpolateObservable(result.chart,row.time_h*60,observable);
+      const residual=predicted-row.observed;
+      return {time_h:row.time_h,observed:row.observed,predicted,residual};
+    });
+    const sse=residuals.reduce((sum,row)=>sum+row.residual*row.residual,0);
+    fits.push({values:[...values],updates,sse,residuals,solver:result.solver,limiter:result.limiter,params});
+    done+=1;
+    progressCb({phase:'calibration',done,total,fraction:done/Math.max(1,total)});
+  };
+  if(keys.length===1){
+    for(const value of grids[0])evalFit([value]);
+  }else{
+    for(const a of grids[0])for(const b of grids[1])evalFit([a,b]);
+  }
+  fits.sort((a,b)=>a.sse-b.sse);
+  const best=fits[0];
+  const threshold=calibrationComparisonThreshold(series.length,keys.length,best.sse);
+  const accepted=fits.filter(f=>f.sse<=threshold);
+  const intervals={};
+  for(let i=0;i<keys.length;i++){
+    const vals=accepted.map(f=>f.values[i]).sort((a,b)=>a-b);
+    intervals[keys[i]]={low:vals[0],best:best.values[i],high:vals[vals.length-1],thresholdSSE:threshold};
+  }
+  let correlation=null;
+  if(keys.length===2){
+    const sigma2=Math.max(sigmaFloor,best.sse/Math.max(1,series.length-keys.length));
+    const weights=accepted.map(f=>Math.exp(-(f.sse-best.sse)/(2*sigma2)));
+    const logsA=accepted.map(f=>Math.log(f.values[0])), logsB=accepted.map(f=>Math.log(f.values[1]));
+    const wsum=weights.reduce((a,b)=>a+b,0)||1;
+    const meanA=logsA.reduce((sum,v,idx)=>sum+v*weights[idx],0)/wsum;
+    const meanB=logsB.reduce((sum,v,idx)=>sum+v*weights[idx],0)/wsum;
+    const cov=logsA.reduce((sum,v,idx)=>sum+(v-meanA)*(logsB[idx]-meanB)*weights[idx],0)/wsum;
+    const varA=logsA.reduce((sum,v,idx)=>sum+(v-meanA)*(v-meanA)*weights[idx],0)/wsum;
+    const varB=logsB.reduce((sum,v,idx)=>sum+(logsB[idx]-meanB)*(logsB[idx]-meanB)*weights[idx],0)/wsum;
+    correlation=(varA>0&&varB>0)?cov/Math.sqrt(varA*varB):null;
+  }
+  const identifiabilityWarnings=[];
+  for(const key of keys){
+    const interval=intervals[key];
+    if(interval.high/Math.max(0.05,interval.low)>8)identifiabilityWarnings.push(`${key} profile range spans more than 8×, so identifiability is weak.`);
+    const grid=grids[keys.indexOf(key)];
+    if(interval.best===grid[0]||interval.best===grid[grid.length-1])identifiabilityWarnings.push(`${key} optimum hit the search boundary; widen the calibration range or add more informative data.`);
+  }
+  if(correlation!=null&&Math.abs(correlation)>0.9)identifiabilityWarnings.push(`Two-parameter fit shows strong likelihood-weighted local correlation (${fmt(correlation,3)}), so the parameters are not cleanly separable from this series alone.`);
+  return {
+    fitMode,
+    observable,
+    observableLabel:calibrationObservableLabel(observable),
+    parameterKeys:keys,
+    bestFit:best.updates,
+    intervals,
+    correlation,
+    sampleCount:series.length,
+    rmse:Math.sqrt(best.sse/Math.max(1,series.length)),
+    sse:best.sse,
+    residuals:best.residuals,
+    identifiabilityWarnings,
+    calibrationConditions:{cell:baseParams.cell?.name||null,medium:baseParams.med?.name||null,gas:baseParams.gas?.name||null,temperatureC:baseParams.T,storageMode:baseParams.storageMode,vessel:baseParams.vessel?.name||null,observable:calibrationObservableLabel(observable),pHModel:baseParams.pHModel},
+    predictionConditionsMatchCurrentSetup:true,
+    thresholdSSE:threshold
+  };
+}
 function renderScenarioTable(result){
   const rows=(result&&result.rateScenarios)||[];
   if(!rows.length){$('#scenarioTable tbody').innerHTML='<tr><td colspan="5">Run a calculation to populate deterministic rate scenarios.</td></tr>'; return;}
   const body=rows.map(row=>`<tr><td>${row.label}${row.available?'':' *'}</td><td>${row.limiter==='simulation horizon'?'≥ '+hoursLabel(result.params.maxDays*24):hoursLabel(row.safeMin/60)}</td><td>${row.limiter}</td><td>${fmt(row.final.O2T,3)} µM</td><td>${fmt(row.final.pH,3)}</td></tr>`).join('');
   const note=rows.some(row=>!row.available)?'<tr><td colspan="5">* Stored low/high bounds were unavailable for at least one scenario, so the current effective rates were reused.</td></tr>':'';
   $('#scenarioTable tbody').innerHTML=body+note;
+}
+function renderCalibrationResult(result){
+  window.lastCalibration=result||null;
+  if(window.lastResult)window.lastResult.calibration=result||null;
+  if(!result){$('#calibrationSummary').textContent='Paste a measured O₂ series and run calibration to fit transport half-times for the current setup.'; $('#calibrationTable tbody').innerHTML='<tr><td colspan="4">Run calibration to populate residuals.</td></tr>'; return;}
+  const keyText=result.parameterKeys.map(key=>`${key} ${fmt(result.bestFit[key],3)} min`).join(' · ');
+  const intervalText=result.parameterKeys.map(key=>{const it=result.intervals[key]; return `${key} profile range ${fmt(it.low,3)}–${fmt(it.high,3)} min`;}).join(' · ');
+  const corrText=result.correlation==null?'single-parameter fit':`likelihood-weighted local correlation ${fmt(result.correlation,3)}`;
+  const warnings=(result.identifiabilityWarnings||[]).map(text=>`<div class="notice warn">${text}</div>`).join('');
+  $('#calibrationSummary').innerHTML=`<div><strong>Best fit:</strong> ${keyText}. <strong>RMSE:</strong> ${fmt(result.rmse,3)} µM across ${fmt(result.sampleCount,0)} points. <strong>Observable:</strong> ${result.observableLabel}. <strong>Conditions match current setup:</strong> ${result.predictionConditionsMatchCurrentSetup?'yes':'no'}.</div><div style="margin-top:6px">${intervalText}. ${corrText}.</div>${warnings}`;
+  $('#calibrationTable tbody').innerHTML=result.residuals.map(row=>`<tr><td>${fmt(row.time_h,3)} h</td><td>${fmt(row.observed,3)}</td><td>${fmt(row.predicted,3)}</td><td>${fmt(row.residual,3)}</td></tr>`).join('');
 }
 function geometryScales(p){
   if(p.halfTimeMode==='measured_effective'){
@@ -1295,7 +1438,7 @@ function solveLinearExchange(nodes,finiteEdges,boundaryEdges,dt){
   return Object.fromEntries(nodes.map((node,i)=>[node.key,solved[i]>-1e-9?Math.max(0,solved[i]):solved[i]]));
 }
 const Engine={simulate(p,hooks={}){
-  const baseDt=Math.max(0.0005,Number.isFinite(p.maxStepMin)?p.maxStepMin:0.5),maxMin=Math.max(.001,p.maxDays)*24*60,chartEvery=5;
+  const baseDt=Math.max(0.0005,Number.isFinite(p.maxStepMin)?p.maxStepMin:0.5),maxMin=Math.max(.001,p.maxDays)*24*60,chartEvery=Math.max(0.05,Number.isFinite(p.chartEveryMin)?p.chartEveryMin:5);
   const initialTrackedCarbon=p.pHModel==='carbonate_alkalinity'?(Number.isFinite(p.DICInitial)?p.DICInitial:carbonateBaseline(p).dic0):(Number.isFinite(p.CO2Initial)?p.CO2Initial:p.CO2eq);
   const capT=Math.max(1e-9,p.volume_nL);
   const baseBulkCaps=occupancyCapacities(p);
@@ -1617,6 +1760,22 @@ function runScenarios(){
   }))return;
   const scenarios=buildRateScenarioResults(base); if(window.lastResult)window.lastResult.rateScenarios=scenarios; renderScenarioTable({params:base,rateScenarios:scenarios}); $('#lastRun').textContent='Deterministic rate scenarios updated.';
 }
+function calibrationConfigFromUI(){
+  return {observable:$('#calibrationObservable')?.value||'O2T',fitMode:$('#calibrationFitMode')?.value||'dropHalf',series:parseCalibrationSeries($('#calibrationSeries')?.value||'')};
+}
+function runCalibration(){
+  const base=window.lastResult&&window.lastResult.params?window.lastResult.params:gatherParams();
+  if(base.invalid&&base.invalid.length){$('#calibrationSummary').innerHTML=`<div class="notice danger">${base.invalid.map(x=>String(x)).join(' ')}</div>`; $('#calibrationTable tbody').innerHTML='<tr><td colspan="4">Calibration blocked.</td></tr>'; return;}
+  let config;
+  try{config=calibrationConfigFromUI();}catch(error){$('#calibrationSummary').innerHTML=`<div class="notice danger">${String(error&&error.message?error.message:error)}</div>`; $('#calibrationTable tbody').innerHTML='<tr><td colspan="4">Calibration input invalid.</td></tr>'; return;}
+  if(startWorkerJob('calibration',{params:base,config},{
+    startText:'Running calibration in background…',
+    onProgress:progress=>{$('#progressNote').textContent=formatWorkerProgress('calibration',progress); $('#lastRun').textContent='Running calibration in background…';},
+    onResult:result=>{renderCalibrationResult(result); $('#lastRun').textContent='Calibration updated from worker.';},
+    onError:()=>{const result=runCalibrationFit(base,config); renderCalibrationResult(result); $('#lastRun').textContent='Calibration updated.';}
+  }))return;
+  const result=runCalibrationFit(base,config); renderCalibrationResult(result); $('#lastRun').textContent='Calibration updated.';
+}
 function uniqueWarningsForResult(r){
   const p=r.params||{};
   const warns=[...(p.warnings||[])];
@@ -1663,6 +1822,7 @@ function buildExportPayload(r){
     warnings,
     uncertaintyScenario:null,
     rateScenarios:r.rateScenarios||[],
+    calibration:r.calibration||null,
     massResiduals:r.mass||{},
     trackedCarbonResidualApplicable:!!r.mass?.closedCarbonBalance,
     result:r
@@ -1746,7 +1906,7 @@ function renderResult(r){
 function classifyRegime(r){const f=r.initialFlux||{}, p=r.params||{}; if(p.atmMode==='closed'&&p.headspace_mL<0.2)return 'finite-headspace-limited'; if((f.localIntoDroplets||0)<(f.demand||0)*0.8)return 'droplet-interface-limited'; if((f.boundaryIntoLiquid||0)<(f.demand||0)*0.8)return 'gas-boundary-limited'; if((r.capacities.capOilE+r.capacities.capOilR)<(r.capacities.capT+r.capacities.capBulkOccupied)*2)return 'reservoir-capacity-limited'; return 'cellular-demand or horizon-limited';}
 function drawChart(r){const c=$('#timeline'),ctx=c.getContext('2d'),rect=c.getBoundingClientRect(),dpr=devicePixelRatio||1; c.width=Math.max(320,Math.floor(rect.width*dpr)); c.height=Math.max(220,Math.floor(rect.height*dpr)); ctx.setTransform(dpr,0,0,dpr,0,0); const W=rect.width,H=rect.height,pad={l:48,r:42,t:18,b:34}; const root=getComputedStyle(document.documentElement); ctx.clearRect(0,0,W,H); ctx.fillStyle=root.getPropertyValue('--solid'); ctx.fillRect(0,0,W,H); const data=r.chart,p=r.params,safeH=r.safeMin/60,xmax=Math.max(2,Math.min(p.maxDays*24,safeH*1.5||24)); const innerW=W-pad.l-pad.r,innerH=H-pad.t-pad.b; const x=t=>pad.l+(t/60)/xmax*innerW; const base=Math.max(1,p.chartO2Reference||p.O2eq); const maxPct=Math.max(115,Math.ceil(Math.max(...data.map(s=>Math.max(s.O2T,s.O2B,s.O2Oil,s.O2Res,p.o2Threshold)).map(v=>100*v/base))/25)*25); const yPct=v=>pad.t+(1-clamp(v,0,maxPct)/maxPct)*innerH, yPH=ph=>pad.t+(1-(clamp(ph,6.4,7.8)-6.4)/1.4)*innerH; ctx.strokeStyle=root.getPropertyValue('--line'); ctx.lineWidth=1; ctx.beginPath(); for(let i=0;i<=4;i++){let yy=pad.t+i*innerH/4; ctx.moveTo(pad.l,yy); ctx.lineTo(W-pad.r,yy)} ctx.stroke(); ctx.fillStyle=root.getPropertyValue('--muted'); ctx.font='11px Inter, system-ui'; ctx.textAlign='center'; for(let i=0;i<=4;i++){ctx.fillText(fmt(i*xmax/4,1)+' h',pad.l+i*innerW/4,H-12)} ctx.textAlign='right'; for(let i=0;i<=4;i++)ctx.fillText(fmt(maxPct-i*maxPct/4,0)+'%',pad.l-8,pad.t+i*innerH/4+4); ctx.textAlign='left'; ctx.fillText('pH 7.8',W-pad.r+4,pad.t+4); ctx.fillText('pH 6.4',W-pad.r+4,pad.t+innerH); const line=(getter,color,yfn=yPct,dash=[])=>{ctx.save();ctx.strokeStyle=color;ctx.lineWidth=2.2;ctx.setLineDash(dash);ctx.beginPath();let started=false; for(const s of data){const xx=x(s.t); if(xx>W-pad.r+4)break; const yy=yfn(getter(s)); if(!started){ctx.moveTo(xx,yy);started=true}else ctx.lineTo(xx,yy)} ctx.stroke();ctx.restore();}; line(s=>100*s.O2T/base,root.getPropertyValue('--a')); line(s=>100*s.O2B/base,'#0ea5e9'); line(s=>100*s.O2Oil/base,root.getPropertyValue('--purple')); line(s=>100*s.O2Res/base,'#a855f7',yPct,[6,4]); line(s=>p.sub.glc?100*s.Glc/p.sub.glc:0,root.getPropertyValue('--b')); line(s=>s.pH,root.getPropertyValue('--warn'),yPH); ctx.save(); ctx.strokeStyle=root.getPropertyValue('--danger'); ctx.setLineDash([7,6]); ctx.lineWidth=1.5; const sx=x(r.safeMin); ctx.beginPath(); ctx.moveTo(sx,pad.t); ctx.lineTo(sx,pad.t+innerH); ctx.stroke(); ctx.fillStyle=root.getPropertyValue('--danger'); ctx.textAlign='center'; ctx.fillText('ENDPOINT',clamp(sx,70,W-70),pad.t+12); ctx.restore(); ctx.save(); ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(37,99,235,.35)'; ctx.beginPath(); ctx.moveTo(pad.l,yPct(100*p.o2Threshold/base)); ctx.lineTo(W-pad.r,yPct(100*p.o2Threshold/base)); ctx.stroke(); ctx.strokeStyle='rgba(217,119,6,.55)'; ctx.beginPath(); ctx.moveTo(pad.l,yPH(p.pHFloor)); ctx.lineTo(W-pad.r,yPH(p.pHFloor)); ctx.stroke(); ctx.restore(); c._chartMap={xmax,pad,innerW,innerH,data,params:p};}
 function chartHover(e){const c=$('#timeline'),m=c._chartMap;if(!m||!m.data.length)return; const r=c.getBoundingClientRect(),xx=e.clientX-r.left,tH=clamp((xx-m.pad.l)/m.innerW*m.xmax,0,m.xmax); const stepH=m.data.length>1?Math.max(1e-9,(m.data[1].t-m.data[0].t)/60):m.xmax; const idx=clamp(Math.round(tH/stepH),0,m.data.length-1); const nearest=m.data[idx]; const tip=$('#chartTip'); tip.style.display='block'; tip.style.left=(e.clientX-r.left)+'px'; tip.style.top=(e.clientY-r.top)+'px'; tip.innerHTML=`<b>${fmt(nearest.t/60,2)} h · ${nearest.status}</b>Target O₂ ${fmt(nearest.O2T,3)} µM<br>Bulk O₂ ${fmt(nearest.O2B,3)} µM<br>Emulsion oil O₂ (w.e.) ${fmt(nearest.O2Oil,3)} µM<br>Reservoir oil O₂ (w.e.) ${fmt(nearest.O2Res,3)} µM<br>CO₂ ${fmt(nearest.CO2T,3)} mM · pH ${fmt(nearest.pH,3)}<br>Glc ${fmt(nearest.Glc,3)} mM · Gln ${fmt(nearest.Gln,3)} mM<br>Target cells ${fmt(nearest.nT,2)}`;}
-function saveState(){try{const data={theme:document.documentElement.dataset.theme,tab:$('.tab.active')?.dataset.tab}; $$('input,select').forEach(el=>{if(el.type==='checkbox')data[el.id]=el.checked; else data[el.id]=el.value}); localStorage.setItem(STATE_KEY,JSON.stringify(data));}catch(e){}}
+function saveState(){try{const data={theme:document.documentElement.dataset.theme,tab:$('.tab.active')?.dataset.tab}; $$('input,select,textarea').forEach(el=>{if(el.type==='checkbox')data[el.id]=el.checked; else data[el.id]=el.value}); localStorage.setItem(STATE_KEY,JSON.stringify(data));}catch(e){}}
 function loadState(){try{const data=JSON.parse(localStorage.getItem(STATE_KEY)||'{}'); if(data.theme){document.documentElement.dataset.theme=data.theme; $('#themeBtn').textContent=data.theme==='dark'?'Light mode':'Dark mode'} Object.entries(data).forEach(([k,v])=>{const el=document.getElementById(k); if(el){if(el.type==='checkbox')el.checked=!!v; else el.value=v}}); if(data.tab)setTab(data.tab);}catch(e){console.warn(e)}}
 function applyPreset(id){const set=(k,v)=>{const el=document.getElementById(k); if(el)el.value=v}; if(id==='single'){set('cellLine','mcf7');set('medium','dmem_high');set('volumeT',sliderFromVol(1));set('targetCells',1);set('lambda',.1);set('totalEmulsion',0.1);set('aqueousFraction',30);set('residualOil',0.2);set('storageMode','static_tube');set('headspaceGas','co2air');set('vesselPreset','eppendorf_1_5');} if(id==='dense'){set('cellLine','mcf7');set('medium','dmem_high');set('volumeT',sliderFromVol(.17));set('targetCells',1);set('lambda',.8);set('totalEmulsion',1.0);set('aqueousFraction',55);set('residualOil',0.025);set('storageMode','static_tube');set('vesselPreset','eppendorf_1_5');} if(id==='reservoir'){set('cellLine','hek293');set('medium','dmem_high');set('volumeT',sliderFromVol(.17));set('targetCells',1);set('lambda',.2);set('totalEmulsion',1.0);set('aqueousFraction',40);set('residualOil',1.5);set('storageMode','oil_circulated');set('oilType','hfe7500');set('vesselPreset','falcon_15');} if(id==='pdms'){set('cellLine','hek293');set('medium','dmem_high');set('volumeT',sliderFromVol(1));set('targetCells',5);set('lambda',.5);set('totalEmulsion',0.02);set('aqueousFraction',25);set('residualOil',0);set('storageMode','pdms_chip');set('oilType','pdms');set('vesselPreset','custom');} if(id==='closed'){set('cellLine','jurkat');set('medium','rpmi1640');set('volumeT',sliderFromVol(1));set('targetCells',1);set('lambda',.3);set('totalEmulsion',0.5);set('aqueousFraction',40);set('residualOil',0.5);set('atmMode','closed');set('storageMode','static_tube');set('vesselPreset','eppendorf_1_5');} syncVesselControls('main'); applyVesselPreset(); updateDynamicUI(); runAndRender();}
 function toCSV(r){const header='time_h,target_o2_uM,bulk_o2_uM,emulsion_oil_o2_water_equiv_uM,reservoir_oil_o2_water_equiv_uM,glucose_mM,glutamine_mM,lactate_mM,co2_mM,pH,target_cells,bulk_cells,status\n'; return header+r.log.map(s=>[s.t/60,s.O2T,s.O2B,s.O2Oil,s.O2Res,s.Glc,s.Gln,s.Lac,s.CO2T,s.pH,s.nT,s.nBulk,s.status].join(',')).join('\n');}

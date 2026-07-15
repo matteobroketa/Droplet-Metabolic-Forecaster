@@ -11,7 +11,7 @@ if (start < 0 || end < 0) throw new Error('Could not locate model code in HTML s
 
 const model = new Function(
   html.slice(start, end) +
-    '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, carbonateConstants, carbonateSpecies, solveCarbonateState, boundaryEquilibriumPH, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec, buildRateScenarioResults, buildExportPayload};'
+    '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, carbonateConstants, carbonateSpecies, solveCarbonateState, boundaryEquilibriumPH, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, parseCalibrationSeries, runCalibrationFit, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec, buildRateScenarioResults, buildExportPayload};'
 )();
 
 const {
@@ -31,6 +31,8 @@ const {
   buildOccupancyModel,
   bulkCellsAt,
   bulkGroupCellsAt,
+  parseCalibrationSeries,
+  runCalibrationFit,
   dryGasPctToHeadspaceMoles,
   thresholdFromMode,
   initialFlux,
@@ -299,7 +301,7 @@ function withMockDom(values, fn) {
       return null;
     },
     querySelectorAll(selector) {
-      if (selector === 'input,select') return [...elements.values()];
+      if (selector === 'input,select' || selector === 'input,select,textarea') return [...elements.values()];
       if (selector === '[id^="qty_"]') return [...elements.values()].filter((el) => el.id.startsWith('qty_'));
       if (selector === 'input[type="number"],input[type="range"]') {
         return [...elements.values()].filter((el) => el.type === 'number' || el.type === 'range');
@@ -937,6 +939,59 @@ run('external CO2 boundary marks closed CO2 residual not applicable', () => {
   assert.strictEqual(r.mass.co2ResidualPct, null, 'CO2 residual should be not applicable for external boundary mode');
 });
 
+run('calibration parser accepts CSV with header', () => {
+  const rows = parseCalibrationSeries('time_h,o2_uM\n0,204\n1 180\n2\t155');
+  assert.strictEqual(rows.length, 3, 'expected three parsed calibration rows');
+  approx(rows[1].time_h, 1, 1e-12, 'second parsed time mismatch');
+  approx(rows[2].observed, 155, 1e-12, 'third parsed value mismatch');
+});
+
+run('single-parameter calibration recovers droplet half-time from synthetic target O2 data', () => {
+  const trueParams = makeParams({
+    pHModel: 'carbonate_alkalinity',
+    targetCells: 20,
+    lambda: 0,
+    volume_nL: 0.578,
+    Vaq_uL: 0.02,
+    totalEmulsion_uL: 0.02,
+    VoilEmul_uL: 0.01,
+    residualOil_uL: 0.03,
+    initialO2T: 204,
+    initialO2B: 204,
+    initialO2Oil: 204,
+    initialO2Res: 204,
+    dropHalf: 12,
+    oilHalf: 80,
+    gasHalf: 200,
+    rates: { ocr: 1.1, gcr: 0, lpr: 0, gln: 0 },
+    maxDays: 0.25,
+    chartEveryMin: 0.25,
+    logStep: 0.25,
+    o2Threshold: 0,
+  });
+  const synthetic = Engine.simulate(trueParams);
+  const times_h = [0, 0.5, 1, 2, 3, 4, 5];
+  const series = times_h.map((time_h) => {
+    const timeMin = time_h * 60;
+    const chart = synthetic.chart;
+    let predicted = chart[chart.length - 1].O2T;
+    for (let i = 1; i < chart.length; i += 1) {
+      if (timeMin <= chart[i].t) {
+        const a = chart[i - 1];
+        const b = chart[i];
+        const frac = (timeMin - a.t) / Math.max(1e-9, b.t - a.t);
+        predicted = a.O2T + (b.O2T - a.O2T) * frac;
+        break;
+      }
+    }
+    return { time_h, observed: predicted };
+  });
+  const fit = runCalibrationFit({ ...trueParams, dropHalf: 4 }, { observable: 'O2T', fitMode: 'dropHalf', series });
+  assert(Math.abs(fit.bestFit.dropHalf - 12) < 3, `calibration should recover droplet half-time near 12 min, got ${fit.bestFit.dropHalf}`);
+  assert(fit.intervals.dropHalf.low <= fit.bestFit.dropHalf && fit.intervals.dropHalf.high >= fit.bestFit.dropHalf, 'profile range should contain the best fit');
+  assert.strictEqual(fit.predictionConditionsMatchCurrentSetup, true, 'calibration should report that prediction conditions match the current setup');
+});
+
 run('carbonate alkalinity solver matches an independent equilibrium root', () => {
   const p = makeParams({
     pHModel: 'carbonate_alkalinity',
@@ -1435,6 +1490,7 @@ run('JSON export payload includes reproducibility metadata and conductances', ()
     const p = gatherParams();
     const r = Engine.simulate(p);
     r.rateScenarios = buildRateScenarioResults(p);
+    r.calibration = { fitMode: 'dropHalf', bestFit: { dropHalf: 10 } };
     const payload = buildExportPayload(r);
     assert.strictEqual(payload.release, 'v18-transport-20260715', 'export release mismatch');
     assert.strictEqual(payload.artifactCommit, 'd4032d9863245a89b4113788fed2cea33372da1f', 'export artifact commit mismatch');
@@ -1445,6 +1501,7 @@ run('JSON export payload includes reproducibility metadata and conductances', ()
     assert(payload.actualConductances && payload.actualConductances.fmolPerMinPerUM.dropTarget >= 0, 'conductance summary missing');
     assert(payload.solverTolerances && payload.solverTolerances.rootMaxIterationsPerEvent === 36, 'solver tolerances missing');
     assert.strictEqual(payload.pHModel, 'carbonate_alkalinity', 'export pH model missing');
+    assert(payload.calibration && payload.calibration.bestFit.dropHalf === 10, 'export calibration summary missing');
     assert(Array.isArray(payload.warnings), 'export warnings missing');
     assert(Array.isArray(payload.rateScenarios) && payload.rateScenarios.length === 3, 'export rate scenarios missing');
     assert.strictEqual(typeof payload.trackedCarbonResidualApplicable, 'boolean', 'tracked-carbon applicability missing');

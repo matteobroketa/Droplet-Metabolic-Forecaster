@@ -23,6 +23,7 @@ Audited release:
 - Bulk O₂ keeps fluorinated oil as the dominant shared reversible reservoir. The app compares sampled oil-mediated droplet equilibration against local occupied-droplet depletion, keeps the shared mean-field model when equilibration stays fast, and exposes a conservative grouped empty/single/multi comparison only when local depletion is comparable to or faster than oil-mediated transport. Even then, grouped droplets still exchange through the shared oil phase rather than acting as permanently isolated oxygen pools.
 - Rate inputs can be interpreted either as 37 °C reference rates with Q10 scaling or as already measured at the selected temperature with no Q10 scaling.
 - Deterministic low-demand, nominal, and high-demand scenario runs are available when stored metabolic-rate bounds exist for the selected line. These are bound sweeps, not probabilistic intervals.
+- The diagnostics tab can now fit pasted O₂ time series against selected transport half-times for the exact current setup, reporting residuals, profile-style ranges, local parameter correlation for two-parameter fits, and explicit identifiability warnings when the data are weak.
 - JSON exports now include reproducibility metadata: audited release, audited source commit, audit-manifest SHA-256, raw inputs, effective parameters, parameter provenance, actual conductances, solver settings, warnings, and deterministic scenario outputs.
 - Manual calculations and sweeps now use a background Web Worker where supported, so long runs can be cancelled instead of locking the UI thread.
 
@@ -155,10 +156,13 @@ For conservative operation, avoid using the full predicted useful window unless 
 A practical calibration experiment can be simple:
 
 1. Culture a known number of cells in the same medium and environmental condition.
-2. Measure glucose, lactate, glutamine, pH, and viability over time.
-3. Convert concentration changes into per-cell rates.
-4. Enter those measured rates in the app using the custom cell-line mode or rate overrides.
-5. Compare predicted endpoints with a second validation run.
+2. Measure O₂ over time for the droplet, bulk, or oil state you want to calibrate, then paste the series into the diagnostics calibration panel.
+3. Fit the relevant half-time or half-time pair and inspect residuals, profile range width, and any identifiability warning before accepting the fit.
+4. Measure glucose, lactate, glutamine, pH, and viability over time to derive custom metabolic rates.
+5. Enter those measured rates in the app using the custom cell-line mode or rate overrides.
+6. Compare predicted endpoints with a second validation run under matched conditions.
+
+The built-in calibration is intentionally limited to transport half-times. It does not yet jointly fit metabolic rates, buffer chemistry, or growth parameters, so poor residual structure or broad fit ranges should be treated as a warning that the data do not identify the selected parameterization.
 
 Approximate conversion:
 

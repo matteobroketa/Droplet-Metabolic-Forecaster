@@ -68,6 +68,26 @@ The artifact can also run three deterministic demand scenarios:
 
 When stored `low/nominal/high` bounds exist for the selected cell line, those bounds are propagated through the current additive, Warburg, and temperature modifiers by scaling around the current effective nominal rates. When stored bounds are unavailable because the user is using custom or explicit override rates, the current effective rates are reused and the UI marks that limitation explicitly.
 
+## Calibration
+
+The diagnostics tab can fit pasted O₂ time series against transport half-times for the current physical setup. Supported observables are:
+
+- target droplet oxygen
+- grouped bulk-droplet oxygen
+- emulsion-oil oxygen
+- reservoir-oil oxygen
+
+Supported fit modes are:
+
+- `dropHalf`
+- `oilHalf`
+- `gasHalf`
+- `dropHalf+oilHalf`
+
+The fitter uses the same `Engine.simulate(...)` path as normal predictions, samples the measurement horizon only, interpolates the chosen observable at each measurement time, and minimizes summed squared error on a log-spaced search grid. Reported diagnostics include residuals, profile-style accepted ranges, and a likelihood-weighted local log-parameter correlation for two-parameter fits.
+
+Calibration is intentionally conservative about identifiability. It warns when accepted ranges stay broad, when the optimum lands on the search boundary, or when two fitted parameters remain strongly correlated. The workflow does not yet recalibrate metabolic rates, nutrient kinetics, or pH chemistry.
+
 ## Export reproducibility
 
 JSON exports include:

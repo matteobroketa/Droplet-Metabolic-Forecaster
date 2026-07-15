@@ -14,7 +14,23 @@ function sha256(relPath) {
 if (!manifest.release) throw new Error('Manifest release missing.');
 if (!manifest.gitCommit) throw new Error('Manifest gitCommit missing.');
 if (!manifest.files || typeof manifest.files !== 'object') throw new Error('Manifest files map missing.');
-if ((manifest.expectedMinimumChecks || 0) < 62) throw new Error('Manifest expectedMinimumChecks is stale.');
+if ((manifest.expectedMinimumChecks || 0) < 64) throw new Error('Manifest expectedMinimumChecks is stale.');
+
+const requiredFiles = [
+  'metabolic_depletion_forecaster.html',
+  'tests/audit_regression.js',
+  'tests/browser_release.mjs',
+  'README.md',
+  'ACCURACY_AND_LIMITATIONS.md',
+  'MODEL_SPECIFICATION.md',
+  'VALIDATION.md',
+];
+
+for (const relPath of requiredFiles) {
+  if (!(relPath in manifest.files)) {
+    throw new Error(`Manifest is missing required file entry: ${relPath}`);
+  }
+}
 
 for (const relPath of Object.keys(manifest.files)) {
   const actual = sha256(relPath);

@@ -18,6 +18,7 @@ Current release status:
 - Exchange half-times now support two modes: geometry-scaled reference values or directly applied measured-effective values.
 - Rate inputs now support two temperature interpretations: referenced to 37 °C with Q10 scaling, or already measured at the selected temperature with no Q10 scaling.
 - Deterministic low-demand / nominal / high-demand scenario runs are available from stored cell-line rate bounds.
+- Calibration now accepts pasted O₂ time series, fits selected transport half-times for the current setup, and reports residuals, profile-style ranges, and identifiability warnings.
 - JSON exports now carry release metadata, audited source commit, audit-manifest SHA-256, raw input snapshots, effective parameters, parameter provenance, actual conductances, solver tolerances, solver diagnostics, warnings, and deterministic scenario summaries.
 - Manual calculations and sweeps now run in a background Web Worker when supported, with progress text and a cancel button instead of freezing the UI thread.
 - pH now defaults to a carbonate/alkalinity mode that tracks aqueous DIC, headspace CO₂, bicarbonate/carbonate speciation, water dissociation, lactate acid equivalents, and linear non-bicarbonate buffer alkalinity. The legacy heuristic bicarbonate/CO₂ mode remains available for backward comparison.
@@ -48,7 +49,7 @@ Supporting audit docs:
 - Emulsion & Gas: Poisson λ, total emulsion volume, aqueous fraction, reservoir oil volume, oil type, vessel format, and exchange kinetics.
 - Environment: gas phase, finite or replenished boundary, temperature, pH limits, and hypoxia threshold.
 - Metabolism: growth, Warburg override, rate overrides, Pasteur effect, and output settings.
-- Diagnostics: gas capacity, exchange half-times, timeline table, exports, and sensitivity sweep.
+- Diagnostics: gas capacity, exchange half-times, timeline table, transport calibration, exports, and sensitivity sweep.
 
 ## Vessel formats
 
