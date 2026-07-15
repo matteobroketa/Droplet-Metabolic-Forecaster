@@ -431,6 +431,14 @@ function baseFormValues(overrides = {}) {
   };
 }
 
+run('artifact render assembles src/app modules and clears the script placeholder', () => {
+  const { html: renderedHtml, appSourceFiles } = renderArtifact(path.join(__dirname, '..'), manifest);
+  assert(appSourceFiles.includes('src/app/00_model_and_solver.js'), 'artifact render should include model/solver source module');
+  assert(appSourceFiles.includes('src/app/10_ui_and_exports.js'), 'artifact render should include UI/export source module');
+  assert(renderedHtml.includes('function captureRawInputs(){'), 'assembled artifact should include UI/export script content');
+  assert(!renderedHtml.includes('__ARTIFACT_APP_SCRIPT__'), 'assembled artifact should not keep the script placeholder');
+});
+
 run('closed oxygen mass conserved without cells', () => {
   const r = Engine.simulate(
     makeParams({

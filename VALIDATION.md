@@ -10,7 +10,7 @@ Primary regression command:
 node tests/audit_regression.js
 ```
 
-Current minimum enforced checks: `65`
+Current minimum enforced checks: `66`
 
 The regression suite covers:
 
@@ -38,6 +38,7 @@ The regression suite covers:
 - preset and vessel synchronization
 - database integrity checks
 - solver-budget protection
+- deterministic artifact assembly from the source template plus ordered `src/app` modules
 
 ## Browser smoke coverage
 
@@ -73,4 +74,4 @@ The browser smoke test verifies:
 - Oil-phase CO2 is not yet included in the tracked-carbon residual.
 - Bulk nutrients remain mean-field even when oxygen uses grouped droplet states.
 - Calibration currently fits only transport half-times from O₂ series; it does not yet provide joint identifiability against metabolic-rate uncertainty or pH data.
-- The standalone artifact is now regenerated from a source template, but the source is still not split into fine-grained model modules.
+- The standalone artifact is now regenerated from a source template plus ordered `src/app` modules, but the code and datasets are still only coarse-grained source files rather than fully separated data/physics/ui packages.

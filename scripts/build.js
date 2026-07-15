@@ -9,7 +9,7 @@ if (!fs.existsSync(artifact)) {
   throw new Error('Standalone artifact missing: metabolic_depletion_forecaster.html');
 }
 const manifest = loadManifest(root);
-const { html } = renderArtifact(root, manifest);
+const { html, appSourceFiles } = renderArtifact(root, manifest);
 fs.writeFileSync(artifact, html);
 
-console.log(`Build passed: regenerated standalone artifact from src/standalone_artifact.template.html for ${manifest.release}.`);
+console.log(`Build passed: regenerated standalone artifact from src/standalone_artifact.template.html and ${appSourceFiles.length} src/app module(s) for ${manifest.release}.`);

@@ -4,7 +4,7 @@ const { loadManifest, renderArtifact } = require('./release_utils');
 
 const root = path.join(__dirname, '..');
 const manifest = loadManifest(root);
-const { html: expectedHtml, manifestSha256, templatePath } = renderArtifact(root, manifest);
+const { html: expectedHtml, manifestSha256, templatePath, appSourceFiles } = renderArtifact(root, manifest);
 const files = {
   html: fs.readFileSync(path.join(root, 'metabolic_depletion_forecaster.html'), 'utf8'),
   readme: fs.readFileSync(path.join(root, 'README.md'), 'utf8'),
@@ -16,6 +16,7 @@ const files = {
 const release = manifest.release;
 const checks = [
   [files.html === expectedHtml, `artifact content does not match rendered source template ${path.relative(root, templatePath)}`],
+  [!files.html.includes('__ARTIFACT_APP_SCRIPT__'), 'artifact still contains unresolved app-script placeholder'],
   [files.html.includes(`release: ${release}`), 'artifact comment release mismatch'],
   [files.html.includes(`data-release="${release}"`), 'body release mismatch'],
   [files.html.includes(`content="${release}"`), 'meta release mismatch'],
@@ -38,4 +39,4 @@ for (const [ok, message] of checks) {
   if (!ok) throw new Error(message);
 }
 
-console.log(`Artifact verification passed for ${release}.`);
+console.log(`Artifact verification passed for ${release} from ${path.relative(root, templatePath)} + ${appSourceFiles.join(', ')}.`);
