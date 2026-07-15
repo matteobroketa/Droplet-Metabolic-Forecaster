@@ -19,6 +19,7 @@ Current release status:
 - Rate inputs now support two temperature interpretations: referenced to 37 °C with Q10 scaling, or already measured at the selected temperature with no Q10 scaling.
 - Deterministic low-demand / nominal / high-demand scenario runs are available from stored cell-line rate bounds.
 - JSON exports now carry release metadata, audited source commit, audit-manifest SHA-256, raw input snapshots, effective parameters, parameter provenance, actual conductances, solver tolerances, solver diagnostics, warnings, and deterministic scenario summaries.
+- Manual calculations and sweeps now run in a background Web Worker when supported, with progress text and a cancel button instead of freezing the UI thread.
 - pH remains a heuristic bicarbonate/CO₂ estimate, not a full carbonate alkalinity solver.
 
 ## Use

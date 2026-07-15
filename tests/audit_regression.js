@@ -1341,6 +1341,17 @@ run('solver accepted-step budget fails gracefully', () => {
   assert(r.error && r.error.includes('accepted-step budget exceeded'), `expected solver budget error, got ${r.error}`);
 });
 
+run('progress hooks report worker-safe progress without changing solver results', () => {
+  const p = makeParams({ maxDays: 0.05, gasHalf: 0.5, oilHalf: 0.5, dropHalf: 0.5, rates: { ocr: 0.4, gcr: 0, lpr: 0, gln: 0 } });
+  const progress = [];
+  const hooked = Engine.simulate(p, { progress: (info) => progress.push(info) });
+  const plain = Engine.simulate(p);
+  assert(progress.length > 0, 'progress hook should receive updates');
+  assert(progress.every((info, idx) => idx === 0 || info.acceptedSteps >= progress[idx - 1].acceptedSteps), 'accepted-step progress should be monotone');
+  approx(hooked.safeMin, plain.safeMin, 1e-9, 'progress hook should not change safe time');
+  approx(hooked.final.O2T, plain.final.O2T, 1e-9, 'progress hook should not change final oxygen');
+});
+
 run('workload estimator flags very expensive configurations', () => {
   const estimate = estimateSolverWorkload(makeParams({ maxDays: 14, gasHalf: 0.1, oilHalf: 0.1, dropHalf: 0.1 }));
   assert(estimate.estimatedSteps > 1000, 'workload estimate should increase for fast-kinetic long-horizon runs');

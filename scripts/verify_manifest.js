@@ -14,7 +14,7 @@ function sha256(relPath) {
 if (!manifest.release) throw new Error('Manifest release missing.');
 if (!manifest.gitCommit) throw new Error('Manifest gitCommit missing.');
 if (!manifest.files || typeof manifest.files !== 'object') throw new Error('Manifest files map missing.');
-if ((manifest.expectedMinimumChecks || 0) < 57) throw new Error('Manifest expectedMinimumChecks is stale.');
+if ((manifest.expectedMinimumChecks || 0) < 58) throw new Error('Manifest expectedMinimumChecks is stale.');
 
 for (const relPath of Object.keys(manifest.files)) {
   const actual = sha256(relPath);

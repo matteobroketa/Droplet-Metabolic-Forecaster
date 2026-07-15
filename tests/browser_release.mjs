@@ -28,25 +28,41 @@ assert((await page.locator('#safeTime').textContent()).trim().length > 0, 'defau
 
 await page.selectOption('#halfTimeMode', 'measured_effective', { force: true });
 await page.evaluate(() => document.getElementById('calculateBtn').click());
-await page.waitForTimeout(100);
+await page.waitForFunction(() => (document.getElementById('gasCards')?.textContent || '').includes('Half-time interpretation'), null, { timeout: 5000 });
 assert((await page.locator('#gasCards').textContent()).includes('Half-time interpretation'), 'measured-effective mode did not render diagnostics');
 await page.click('[data-tab=\"diagnostics\"]');
 await page.click('#runScenariosBtn');
-await page.waitForTimeout(100);
+await page.waitForFunction(() => (document.getElementById('scenarioTable')?.textContent || '').includes('nominal'), null, { timeout: 5000 });
 assert((await page.locator('#scenarioTable').textContent()).includes('nominal'), 'deterministic scenario table did not populate');
 
 await page.selectOption('#atmMode', 'incubator', { force: true });
 await page.selectOption('#pHBoundaryMode', 'closed_headspace_mass_balance', { force: true });
 await page.evaluate(() => document.getElementById('calculateBtn').click());
-await page.waitForTimeout(100);
+await page.waitForFunction(() => (document.getElementById('safeTime')?.textContent || '').includes('Invalid'), null, { timeout: 5000 });
 assert((await page.locator('#safeTime').textContent()).includes('Invalid'), 'incompatible carbon/gas mode should block calculation');
 
 await page.selectOption('#atmMode', 'closed', { force: true });
 await page.selectOption('#headspaceGas', 'nitrogen', { force: true });
 await page.selectOption('#o2ThresholdMode', 'selected_pct', { force: true });
 await page.evaluate(() => document.getElementById('calculateBtn').click());
-await page.waitForTimeout(100);
+await page.waitForFunction(() => (document.getElementById('warnings')?.textContent || '').includes('selected-gas O₂ thresholds are invalid'), null, { timeout: 5000 });
 assert((await page.locator('#warnings').textContent()).includes('selected-gas O₂ thresholds are invalid'), 'anoxic selected-gas threshold warning missing');
+
+await page.selectOption('#headspaceGas', 'co2air', { force: true });
+await page.selectOption('#o2ThresholdMode', 'absolute_uM', { force: true });
+await page.evaluate(() => {
+  document.getElementById('maxDays').value = '14';
+  document.getElementById('gasHalf').value = '0.1';
+  document.getElementById('oilHalf').value = '0.1';
+  document.getElementById('dropHalf').value = '0.1';
+});
+await page.evaluate(() => document.getElementById('calculateBtn').click());
+await page.waitForFunction(() => (document.getElementById('lastRun')?.textContent || '').includes('Running calculation in background'), null, { timeout: 5000 });
+assert((await page.locator('#cancelBtn').isDisabled()) === false, 'cancel button should enable during worker run');
+assert((await page.locator('#lastRun').textContent()).includes('Running calculation in background'), 'worker-backed run status missing');
+await page.evaluate(() => document.getElementById('cancelBtn').click());
+await page.waitForFunction(() => (document.getElementById('lastRun')?.textContent || '').includes('cancelled'), null, { timeout: 5000 });
+assert((await page.locator('#lastRun').textContent()).includes('cancelled'), 'worker cancellation status missing');
 
 const renderedText = [
   await page.locator('#safeTime').textContent(),

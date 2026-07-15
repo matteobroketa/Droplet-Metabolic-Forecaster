@@ -24,6 +24,7 @@ Audited release:
 - Rate inputs can be interpreted either as 37 °C reference rates with Q10 scaling or as already measured at the selected temperature with no Q10 scaling.
 - Deterministic low-demand, nominal, and high-demand scenario runs are available when stored metabolic-rate bounds exist for the selected line. These are bound sweeps, not probabilistic intervals.
 - JSON exports now include reproducibility metadata: audited release, audited source commit, audit-manifest SHA-256, raw inputs, effective parameters, parameter provenance, actual conductances, solver settings, warnings, and deterministic scenario outputs.
+- Manual calculations and sweeps now use a background Web Worker where supported, so long runs can be cancelled instead of locking the UI thread.
 
 ## Remaining important limitations
 
