@@ -20,8 +20,9 @@ Audited release:
 - Closed zero-headspace configurations disable headspace gas exchange rather than transferring mass into a zero-volume gas compartment.
 - Tracked aqueous + headspace CO₂ residuals are only meaningful in finite closed-headspace CO₂ mass-balance mode. External CO₂ reservoir modes are not treated as closed carbon balances, and oil-phase CO₂ is still outside the tracked inventory.
 - Exchange half-times can be entered either as reference values to be geometry-scaled or as measured-effective values for the exact current configuration.
-- Bulk O₂ can remain a shared mean-field reservoir when sampled oil-mediated equilibration is fast, or switch to grouped empty/single/multi droplet pools when local depletion is transport-limited.
+- Bulk O₂ keeps fluorinated oil as the dominant shared reversible reservoir. The app compares sampled oil-mediated equilibration against local occupied-droplet depletion, keeps the shared mean-field model by default, and exposes a conservative grouped empty/single/multi comparison when local depletion is transport-limited.
 - Rate inputs can be interpreted either as 37 °C reference rates with Q10 scaling or as already measured at the selected temperature with no Q10 scaling.
+- Deterministic low-demand, nominal, and high-demand scenario runs are available when stored metabolic-rate bounds exist for the selected line. These are bound sweeps, not probabilistic intervals.
 
 ## Remaining important limitations
 

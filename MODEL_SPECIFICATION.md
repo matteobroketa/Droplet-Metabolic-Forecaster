@@ -19,14 +19,14 @@ This artifact is a standalone planning model for droplet emulsions and small-vol
 
 Fluorinated oil remains the dominant reversible oxygen reservoir. Cells are the irreversible oxygen sink.
 
-Bulk oxygen uses two explicit regimes:
+Bulk oxygen uses one shared physical oil reservoir with two solver views:
 
 - `shared_mean_field`
-  Use when sampled oil-mediated exchange remains fast relative to local occupied-droplet depletion.
+  Default bulk approximation. Use when sampled oil-mediated exchange remains fast relative to local occupied-droplet depletion.
 - `grouped_transport_limited`
-  Use when sampled local depletion is comparable to or faster than oil-mediated equilibration.
+  Conservative empty/single/multicell comparison. Use when sampled local depletion is comparable to or faster than oil-mediated equilibration.
 
-Both grouped and shared modes exchange with the same oil compartment. Oxygen is not treated as permanently isolated by droplet occupancy.
+Both views exchange with the same oil compartment. Oxygen is not treated as permanently isolated by droplet occupancy. In `auto`, the model compares the effective oil-to-droplet half-time against sampled local depletion times, retains `shared_mean_field`, and raises a warning plus grouped recommendation only when transport limitation is plausible.
 
 ## Half-time semantics
 
@@ -54,6 +54,16 @@ Exchange is advanced with a simultaneous conservative implicit solve across the 
 ## Growth and occupancy
 
 Bulk proliferation uses Poisson occupancy classes. Multicell growth is evaluated as an occupancy-weighted sum across classes with `k >= 2`; it is not approximated by a mean seed occupancy.
+
+## Deterministic uncertainty scenarios
+
+The artifact can also run three deterministic demand scenarios:
+
+- low metabolic demand
+- nominal
+- high metabolic demand
+
+When stored `low/nominal/high` bounds exist for the selected cell line, those bounds are propagated through the current additive, Warburg, and temperature modifiers by scaling around the current effective nominal rates. When stored bounds are unavailable because the user is using custom or explicit override rates, the current effective rates are reused and the UI marks that limitation explicitly.
 
 ## Carbon accounting
 

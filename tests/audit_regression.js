@@ -11,7 +11,7 @@ if (start < 0 || end < 0) throw new Error('Could not locate model code in HTML s
 
 const model = new Function(
   html.slice(start, end) +
-    '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec};'
+    '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec, buildRateScenarioResults};'
 )();
 
 const {
@@ -39,6 +39,7 @@ const {
   applyPreset,
   syncVesselControls,
   vesselSpec,
+  buildRateScenarioResults,
 } = model;
 
 const AIR_GAS = { o2: 0.2095, co2: 0.0004 };
@@ -62,6 +63,8 @@ function makeParams(overrides = {}) {
   const p = {
     T,
     gas,
+    cell: overrides.cell ?? { id: 'test_cell', name: 'Test', ocr: 0.2, ocrLow: 0.1, ocrHigh: 0.4, gcr: 0.1, gcrLow: 0.05, gcrHigh: 0.2, lpr: 0.1, lprLow: 0.05, lprHigh: 0.2, gln: 0.05, glnLow: 0.02, glnHigh: 0.08, evidenceTier: 'A' },
+    med: overrides.med ?? { id: 'test_medium', name: 'Test medium' },
     O2eq,
     airO2Eq,
     CO2eq,
@@ -141,6 +144,7 @@ function makeParams(overrides = {}) {
     carryingCellsPerNL: overrides.carryingCellsPerNL ?? 300,
     pasteurThreshold_uM: overrides.pasteurThreshold_uM ?? 20,
     pasteurMax: overrides.pasteurMax ?? 1.8,
+    rateScenarioSource: overrides.rateScenarioSource ?? { customCell: false, overridesActive: false },
     warnings: [],
     invalid: [],
   };
@@ -1229,6 +1233,46 @@ run('rate temperature interpretation applies Q10 only in reference mode', () => 
   });
 });
 
+run('deterministic rate scenarios use stored low/nominal/high bounds', () => {
+  const p = makeParams({
+    cell: { id: 'bounded', name: 'Bounded', ocr: 2, ocrLow: 1, ocrHigh: 4, gcr: 0, gcrLow: 0, gcrHigh: 0, lpr: 0, lprLow: 0, lprHigh: 0, gln: 0, glnLow: 0, glnHigh: 0, evidenceTier: 'A' },
+    rates: { ocr: 2, gcr: 0, lpr: 0, gln: 0 },
+    initialO2T: 10,
+    initialO2B: 10,
+    initialO2Oil: 0,
+    initialO2Res: 0,
+    VoilEmul_uL: 0,
+    residualOil_uL: 0,
+    targetCells: 1,
+    lambda: 0,
+    o2Threshold: 0,
+    headspace_mL: 0,
+    gasHalf: 1e9,
+    oilHalf: 1e9,
+    dropHalf: 1e9,
+    maxDays: 0.01,
+  });
+  const scenarios = buildRateScenarioResults(p);
+  assert.strictEqual(scenarios.length, 3, 'expected low/nominal/high scenarios');
+  assert.strictEqual(scenarios[0].available, true, 'stored bounds should be available');
+  approx(scenarios[0].rates.ocr, 1, 1e-9, 'low-demand OCR should use low bound');
+  approx(scenarios[1].rates.ocr, 2, 1e-9, 'nominal OCR should use nominal rate');
+  approx(scenarios[2].rates.ocr, 4, 1e-9, 'high-demand OCR should use high bound');
+  assert(scenarios[0].final.O2T >= scenarios[1].final.O2T, 'low-demand scenario should leave at least as much final O2 as nominal');
+  assert(scenarios[1].final.O2T >= scenarios[2].final.O2T, 'nominal scenario should leave at least as much final O2 as high-demand');
+});
+
+run('deterministic rate scenarios fall back to current rates when custom or override rates are active', () => {
+  const p = makeParams({
+    cell: { id: 'custom', name: 'Custom', ocr: 2, gcr: 1, lpr: 1, gln: 0.5 },
+    rates: { ocr: 3, gcr: 1.5, lpr: 2, gln: 0.75 },
+    rateScenarioSource: { customCell: true, overridesActive: true },
+  });
+  const scenarios = buildRateScenarioResults(p);
+  assert(scenarios.every((s) => s.available === (s.id === 'nominal')), 'custom/override cases should only have exact nominal bounds');
+  assert(scenarios.every((s) => Math.abs(s.rates.ocr - 3) < 1e-12), 'fallback scenarios should reuse current effective rates');
+});
+
 run('generic min/max enforcement catches temperature, surface exposure, and decimals', () => {
   withMockDom(
     baseFormValues({
@@ -1293,7 +1337,53 @@ run('auto bulk O2 matches the shared mean-field limit when exchange is fast', ()
   approx(auto.safeMin, shared.safeMin, 1e-9, 'auto mode should match the shared limit');
 });
 
-run('auto bulk O2 matches the grouped isolated-droplet limit when exchange is slow', () => {
+run('grouped bulk O2 matches the isolated-droplet limit when exchange is slow', () => {
+  const lambda = 0.1;
+  const occupancy = buildOccupancyModel(lambda, 1000, 0);
+  const base = makeParams({
+    bulkO2Mode: 'grouped_transport_limited',
+    lambda,
+    N: 1000,
+    occupancy,
+    Vaq_uL: 1,
+    targetCells: 0,
+    dropHalf: 1e9,
+    gasHalf: 1e9,
+    oilHalf: 1e9,
+    rates: { ocr: 200, gcr: 0, lpr: 0, gln: 0 },
+    initialO2T: 10,
+    initialO2B: 10,
+    initialO2Oil: 0,
+    initialO2Res: 0,
+    maxDays: 0.1,
+    atmMode: 'closed',
+    headspace_mL: 0,
+    o2Threshold: 0,
+  });
+  const grouped = Engine.simulate(base);
+  assert.strictEqual(grouped.bulkO2Regime.selectedMode, 'grouped_transport_limited', 'grouped mode should stay grouped');
+  assert(grouped.final.O2Empty > 9.9, `empty droplets should keep near-initial oxygen in the isolated-droplet limit, got ${grouped.final.O2Empty}`);
+  assert(grouped.final.O2BulkOccupied < 9, `occupied droplets should deplete their own oxygen in the isolated-droplet limit, got ${grouped.final.O2BulkOccupied}`);
+});
+
+run('grouped bulk O2 converges to the shared mean-field limit when exchange is fast', () => {
+  const base = makeParams({
+    bulkO2Mode: 'grouped_transport_limited',
+    lambda: 0.1,
+    dropHalf: 0.01,
+    gasHalf: 1e9,
+    oilHalf: 1e9,
+    rates: { ocr: 2, gcr: 0, lpr: 0, gln: 0 },
+    maxDays: 0.01,
+    o2Threshold: 0,
+  });
+  const grouped = Engine.simulate(base);
+  const shared = Engine.simulate({ ...base, bulkO2Mode: 'shared_mean_field' });
+  approx(grouped.safeMin, shared.safeMin, 1e-9, 'grouped fast-exchange limit should match shared mean-field safe time');
+  approx(grouped.final.O2BulkOccupied, shared.final.O2BulkOccupied, 0.25, 'grouped fast-exchange limit should match shared bulk oxygen within a tight fast-exchange tolerance');
+});
+
+run('auto bulk O2 warns instead of switching when exchange is slow', () => {
   const lambda = 0.1;
   const occupancy = buildOccupancyModel(lambda, 1000, 0);
   const base = makeParams({
@@ -1317,13 +1407,14 @@ run('auto bulk O2 matches the grouped isolated-droplet limit when exchange is sl
     o2Threshold: 0,
   });
   const auto = Engine.simulate(base);
-  const grouped = Engine.simulate({ ...base, bulkO2Mode: 'grouped_transport_limited' });
-  assert.strictEqual(auto.bulkO2Regime.selectedMode, 'grouped_transport_limited', 'auto mode should switch to grouped when exchange is slow');
-  approx(auto.final.O2Empty, grouped.final.O2Empty, 1e-9, 'auto grouped mode should match the isolated-droplet limit');
-  approx(auto.final.O2BulkOccupied, grouped.final.O2BulkOccupied, 1e-9, 'auto grouped mode should match occupied-droplet depletion');
+  const shared = Engine.simulate({ ...base, bulkO2Mode: 'shared_mean_field' });
+  assert.strictEqual(auto.bulkO2Regime.selectedMode, 'shared_mean_field', 'auto mode should retain the shared oil reservoir');
+  assert.strictEqual(auto.bulkO2Regime.recommendedMode, 'grouped_transport_limited', 'auto mode should recommend grouped transport when depletion outruns exchange');
+  assert.strictEqual(auto.bulkO2Regime.warningOnly, true, 'transport-limited auto mode should issue a warning instead of switching');
+  approx(auto.safeMin, shared.safeMin, 1e-9, 'auto warning mode should still execute the shared mean-field model');
 });
 
-run('auto bulk O2 becomes grouped when proliferation makes later depletion transport-limited', () => {
+run('auto bulk O2 warns when proliferation makes later depletion transport-limited', () => {
   const base = makeParams({
     bulkO2Mode: 'auto',
     halfTimeMode: 'measured_effective',
@@ -1345,9 +1436,13 @@ run('auto bulk O2 becomes grouped when proliferation makes later depletion trans
   });
   const auto = Engine.simulate(base);
   const grouped = Engine.simulate({ ...base, bulkO2Mode: 'grouped_transport_limited' });
-  assert.strictEqual(auto.bulkO2Regime.selectedMode, 'grouped_transport_limited', 'auto mode should turn grouped when later growth outruns exchange');
+  const shared = Engine.simulate({ ...base, bulkO2Mode: 'shared_mean_field' });
+  assert.strictEqual(auto.bulkO2Regime.selectedMode, 'shared_mean_field', 'auto mode should keep the shared oil reservoir active');
+  assert.strictEqual(auto.bulkO2Regime.recommendedMode, 'grouped_transport_limited', 'later transport limitation should recommend grouped transport');
+  assert.strictEqual(auto.bulkO2Regime.warningOnly, true, 'later transport limitation should issue a shared-model warning');
   assert(auto.bulkO2Regime.sampledTimeMin > 0, 'transport limitation should be detected from a later sampled time, not only the initial state');
-  approx(auto.safeMin, grouped.safeMin, 1e-9, 'auto proliferation-triggered grouped mode should match the grouped reference');
+  approx(auto.safeMin, shared.safeMin, 1e-9, 'auto warning mode should still run the shared reference');
+  assert(Math.abs(grouped.safeMin - shared.safeMin) > 1e-6 || Math.abs(grouped.final.O2BulkOccupied - shared.final.O2BulkOccupied) > 1e-6, 'grouped comparison should remain available when later transport limitation matters');
 });
 
 console.log(`PASS: ${passCount}`);

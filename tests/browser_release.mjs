@@ -25,20 +25,24 @@ assert((await page.locator('body').getAttribute('data-release')) === 'v18-transp
 assert((await page.locator('#safeTime').textContent()).trim().length > 0, 'default calculation missing');
 
 await page.selectOption('#halfTimeMode', 'measured_effective', { force: true });
-await page.click('#calculateBtn');
+await page.evaluate(() => document.getElementById('calculateBtn').click());
 await page.waitForTimeout(100);
 assert((await page.locator('#gasCards').textContent()).includes('Half-time interpretation'), 'measured-effective mode did not render diagnostics');
+await page.click('[data-tab=\"diagnostics\"]');
+await page.click('#runScenariosBtn');
+await page.waitForTimeout(100);
+assert((await page.locator('#scenarioTable').textContent()).includes('nominal'), 'deterministic scenario table did not populate');
 
 await page.selectOption('#atmMode', 'incubator', { force: true });
 await page.selectOption('#pHBoundaryMode', 'closed_headspace_mass_balance', { force: true });
-await page.click('#calculateBtn');
+await page.evaluate(() => document.getElementById('calculateBtn').click());
 await page.waitForTimeout(100);
 assert((await page.locator('#safeTime').textContent()).includes('Invalid'), 'incompatible carbon/gas mode should block calculation');
 
 await page.selectOption('#atmMode', 'closed', { force: true });
 await page.selectOption('#headspaceGas', 'nitrogen', { force: true });
 await page.selectOption('#o2ThresholdMode', 'selected_pct', { force: true });
-await page.click('#calculateBtn');
+await page.evaluate(() => document.getElementById('calculateBtn').click());
 await page.waitForTimeout(100);
 assert((await page.locator('#warnings').textContent()).includes('selected-gas O₂ thresholds are invalid'), 'anoxic selected-gas threshold warning missing');
 

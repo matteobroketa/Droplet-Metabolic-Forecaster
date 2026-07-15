@@ -9,7 +9,7 @@ Current release status:
 - Finite exchange now uses the entered half-time as the actual concentration-difference half-time for finite pairs, with a simultaneous conservative solve across the coupled exchange network.
 - Initial liquid O₂ and closed-headspace gas states are independent of the selected boundary gas.
 - Bulk demand uses Poisson occupancy classes so empty droplets do not inherit carrying capacity.
-- Bulk O₂ now keeps fluorinated oil as the shared reversible reservoir and switches by regime: shared mean-field when sampled oil-mediated exchange is faster than local depletion, grouped empty/single/multi droplet pools only when transport limitation is plausible.
+- Bulk O₂ now keeps fluorinated oil as the shared reversible reservoir, compares oil-mediated exchange against local occupied-droplet depletion, and recommends the conservative grouped empty/single/multi comparison only when transport limitation is plausible.
 - O₂ uptake is Michaelis-Menten-limited near low oxygen.
 - Partial-step endpoint acceptance reruns only the accepted fraction, so mass counters and stop times stay aligned.
 - Zero-headspace closed runs disable headspace gas exchange instead of leaking into a nonexistent gas compartment.
@@ -17,6 +17,7 @@ Current release status:
 - CO₂ diagnostics are explicitly labeled as tracked aqueous + headspace CO₂ residuals; oil-phase CO₂ is not yet tracked.
 - Exchange half-times now support two modes: geometry-scaled reference values or directly applied measured-effective values.
 - Rate inputs now support two temperature interpretations: referenced to 37 °C with Q10 scaling, or already measured at the selected temperature with no Q10 scaling.
+- Deterministic low-demand / nominal / high-demand scenario runs are available from stored cell-line rate bounds.
 - pH remains a heuristic bicarbonate/CO₂ estimate, not a full carbonate alkalinity solver.
 
 ## Use
