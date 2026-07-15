@@ -27,6 +27,7 @@ Bulk oxygen uses one shared physical oil reservoir with two solver views:
   Conservative empty/single/multicell comparison. Use when sampled local depletion is comparable to or faster than oil-mediated equilibration.
 
 Both views exchange with the same oil compartment. Oxygen is not treated as permanently isolated by droplet occupancy. In `auto`, the model compares the effective oil-to-droplet half-time against sampled local depletion times, retains `shared_mean_field`, and raises a warning plus grouped recommendation only when transport limitation is plausible.
+The transport-limited trigger is conservative: when sampled local occupied-droplet depletion becomes comparable to or faster than oil-mediated equilibration, the grouped empty/single/multicell comparison is recommended. When equilibration stays fast, the shared mean-field limit is retained.
 
 ## Half-time semantics
 

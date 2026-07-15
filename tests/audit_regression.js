@@ -1192,6 +1192,34 @@ run('empty droplets keep their oxygen when oil exchange is negligible', () => {
   assert(r.final.O2BulkOccupied < 9, `occupied droplets should consume only their own oxygen, got ${r.final.O2BulkOccupied}`);
 });
 
+run('grouped bulk O2 still shares the oil reservoir at finite exchange', () => {
+  const lambda = 0.1;
+  const occupancy = buildOccupancyModel(lambda, 1000, 1);
+  const common = {
+    bulkO2Mode: 'grouped_transport_limited',
+    lambda,
+    N: 1000,
+    occupancy,
+    Vaq_uL: 1,
+    targetCells: 0,
+    rates: { ocr: 200, gcr: 0, lpr: 0, gln: 0 },
+    initialO2T: 10,
+    initialO2B: 10,
+    initialO2Oil: 0,
+    initialO2Res: 0,
+    gasHalf: 1e9,
+    oilHalf: 1e9,
+    maxDays: 0.1,
+    atmMode: 'closed',
+    headspace_mL: 0,
+    o2Threshold: 0,
+  };
+  const isolated = Engine.simulate(makeParams({ ...common, dropHalf: 1e9 }));
+  const finite = Engine.simulate(makeParams({ ...common, dropHalf: 5 }));
+  assert(finite.final.O2Empty < isolated.final.O2Empty - 1, `finite oil-mediated exchange should let occupied droplets draw oxygen from empty droplets through shared oil; isolated empty=${isolated.final.O2Empty}, finite empty=${finite.final.O2Empty}`);
+  assert(finite.final.O2BulkOccupied > isolated.final.O2BulkOccupied + 1e-6, `finite oil-mediated exchange should relay some oxygen back into occupied droplets; isolated occupied=${isolated.final.O2BulkOccupied}, finite occupied=${finite.final.O2BulkOccupied}`);
+});
+
 run('preset synchronization resets PTFE kinetics when returning to a static tube', () => {
   withMockDom(baseFormValues({ vesselPreset: 'ptfe_600', vesselPresetEnv: 'ptfe_600', storageMode: 'ptfe_tubing' }), () => {
     applyVesselPreset();

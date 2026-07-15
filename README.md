@@ -9,7 +9,7 @@ Current release status:
 - Finite exchange now uses the entered half-time as the actual concentration-difference half-time for finite pairs, with a simultaneous conservative solve across the coupled exchange network.
 - Initial liquid O₂ and closed-headspace gas states are independent of the selected boundary gas.
 - Bulk demand uses Poisson occupancy classes so empty droplets do not inherit carrying capacity.
-- Bulk O₂ now keeps fluorinated oil as the shared reversible reservoir, compares oil-mediated exchange against local occupied-droplet depletion, and recommends the conservative grouped empty/single/multi comparison only when transport limitation is plausible.
+- Bulk O₂ now keeps fluorinated oil as the shared reversible reservoir, explicitly compares oil-mediated droplet equilibration against local occupied-droplet depletion, and recommends the conservative grouped empty/single/multi comparison only when depletion is comparable to or faster than equilibration. Even in grouped mode, empty and occupied droplets still communicate through the shared oil phase.
 - O₂ uptake is Michaelis-Menten-limited near low oxygen.
 - Partial-step endpoint acceptance reruns only the accepted fraction, so mass counters and stop times stay aligned.
 - Zero-headspace closed runs disable headspace gas exchange instead of leaking into a nonexistent gas compartment.

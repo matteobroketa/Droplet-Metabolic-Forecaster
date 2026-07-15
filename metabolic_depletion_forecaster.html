@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Metabolic Depletion Forecaster v18</title>
 <meta name="artifact-release" content="v18-transport-20260715" />
-<meta name="artifact-commit" content="811258094557f1fa2c394b208a9f3f80ae44d455" />
-<meta name="artifact-manifest-sha256" content="E47681A1E5EB5B2C3E75243F54FAC61C183943D8DA4F266A272A9483CA1025E5" />
+<meta name="artifact-commit" content="1631ee7d0242932e8ab04801589f038f88b42f02" />
+<meta name="artifact-manifest-sha256" content="1A9CD360AE578D285711BEB3AAAFECEA87114C32CB9F1A67DC7ACEBF025FD621" />
 <meta name="description" content="Forecast oxygen, nutrient, and pH limits in droplet emulsions and small-volume cultures." />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%232563eb'/%3E%3Cstop offset='1' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='%2308111f'/%3E%3Ccircle cx='24' cy='32' r='12' fill='url(%23g)'/%3E%3Ccircle cx='42' cy='25' r='7' fill='%238b5cf6'/%3E%3Ccircle cx='42' cy='41' r='5' fill='%2306b6d4'/%3E%3Cpath d='M15 50c10-8 27-8 38 0' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' opacity='.9'/%3E%3C/svg%3E" />
 <style>
@@ -1088,12 +1088,15 @@ function bulkDepletionTimes(p,baseCaps){
 function resolveBulkOxygenRegime(p,effectiveDropBulkHalf=null,baseCaps=occupancyCapacities(p)){
   const exchangeHalfMin=effectiveDropBulkHalf??effectiveHalfTime(p.dropHalf,geometryScales(p).dropBulk,p.halfTimeMode);
   const depletion=bulkDepletionTimes(p,baseCaps);
-  const transportLimited=Number.isFinite(depletion.minDepletionMin)&&depletion.minDepletionMin<=exchangeHalfMin*2;
+  const comparisonThresholdRatio=2;
+  const depletionToExchangeRatio=Number.isFinite(depletion.minDepletionMin)&&exchangeHalfMin>0?depletion.minDepletionMin/exchangeHalfMin:Infinity;
+  const exchangeToDepletionRatio=Number.isFinite(depletion.minDepletionMin)&&depletion.minDepletionMin>0?exchangeHalfMin/depletion.minDepletionMin:Infinity;
+  const transportLimited=depletionToExchangeRatio<=comparisonThresholdRatio;
   const requestedMode=p.bulkO2Mode||'auto';
   const recommendedMode=transportLimited?'grouped_transport_limited':'shared_mean_field';
   const selectedMode=requestedMode==='auto'?'shared_mean_field':requestedMode;
   const warningOnly=selectedMode==='shared_mean_field'&&transportLimited;
-  return {...depletion,exchangeHalfMin,transportLimited,requestedMode,recommendedMode,selectedMode,warningOnly};
+  return {...depletion,exchangeHalfMin,depletionToExchangeRatio,exchangeToDepletionRatio,comparisonThresholdRatio,transportLimited,requestedMode,recommendedMode,selectedMode,warningOnly};
 }
 function bulkCapacitiesForMode(baseCaps,mode){
   if(mode==='shared_mean_field')return {capEmpty:0,capSingle:0,capMulti:baseCaps.capBulk,capBulk:baseCaps.capBulk,capBulkOccupied:baseCaps.capBulk,bulkO2Mode:mode};
@@ -1591,7 +1594,7 @@ function renderResult(r){
     ['Target droplet half-time',fmt(r.effective.dropTargetHalf,1)+' min'],
     ['Bulk droplet half-time',fmt(r.effective.dropBulkHalf,1)+' min'],
     ['Half-time interpretation',p.halfTimeMode.replaceAll('_',' '),'reference-scaled or directly measured'],
-    ['Bulk O₂ regime',r.bulkO2Regime.selectedMode.replaceAll('_',' '),`drop half-time ${fmt(r.bulkO2Regime.exchangeHalfMin,2)} min vs sampled min local depletion ${Number.isFinite(r.bulkO2Regime.minDepletionMin)?fmt(r.bulkO2Regime.minDepletionMin,2):'∞'} min at ${fmt((r.bulkO2Regime.sampledTimeMin||0)/60,2)} h${r.bulkO2Regime.warningOnly?`; grouped transport-limited comparison recommended`:''}`],
+    ['Bulk O₂ regime',r.bulkO2Regime.selectedMode.replaceAll('_',' '),`drop half-time ${fmt(r.bulkO2Regime.exchangeHalfMin,2)} min vs sampled min local depletion ${Number.isFinite(r.bulkO2Regime.minDepletionMin)?fmt(r.bulkO2Regime.minDepletionMin,2):'∞'} min at ${fmt((r.bulkO2Regime.sampledTimeMin||0)/60,2)} h; depletion/exchange ratio ${Number.isFinite(r.bulkO2Regime.depletionToExchangeRatio)?fmt(r.bulkO2Regime.depletionToExchangeRatio,2):'∞'}x${r.bulkO2Regime.warningOnly?`; grouped transport-limited comparison recommended`:''}`],
     ['Rate temperature mode',p.rateTemperatureMode.replaceAll('_',' '),p.rateTemperatureMode==='reference_37c_q10'?`Q10 OCR ${fmt(p.q10Factor.ocr,3)} · GCR ${fmt(p.q10Factor.gcr,3)} · LPR ${fmt(p.q10Factor.lpr,3)} · GLN ${fmt(p.q10Factor.gln,3)}`:'no Q10 temperature scaling applied'],
     ['Geometry mode',r.geometry.notes],
     ['O₂ threshold',fmt(p.o2Threshold,3)+' µM',thresholdLabel(p)],

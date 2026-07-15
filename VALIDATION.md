@@ -10,7 +10,7 @@ Primary regression command:
 node tests/audit_regression.js
 ```
 
-Current minimum enforced checks: `58`
+Current minimum enforced checks: `59`
 
 The regression suite covers:
 
@@ -26,6 +26,7 @@ The regression suite covers:
 - measured-effective vs reference-scaled half-time interpretation
 - finite-pair and infinite-boundary half-time analytical checks
 - shared-limit and isolated-droplet-limit bulk oxygen checks
+- finite-exchange shared-oil relay between empty and occupied droplet groups
 - transport-limited warning detection with grouped comparison still available
 - deterministic low/nominal/high demand scenario generation
 - export reproducibility metadata
