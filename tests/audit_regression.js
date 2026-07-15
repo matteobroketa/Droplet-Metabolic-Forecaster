@@ -1,10 +1,12 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
+const { loadManifest, renderArtifact } = require('../scripts/release_utils');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'metabolic_depletion_forecaster.html'), 'utf8');
 const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
 const limitations = fs.readFileSync(path.join(__dirname, '..', 'ACCURACY_AND_LIMITATIONS.md'), 'utf8');
+const manifest = loadManifest(path.join(__dirname, '..'));
 const start = html.indexOf('const DATA=');
 const end = html.indexOf("window.addEventListener('resize'");
 if (start < 0 || end < 0) throw new Error('Could not locate model code in HTML source.');
@@ -914,6 +916,13 @@ run('public release identity is consistent', () => {
   assert(readme.includes(release), 'README release mismatch');
   assert(limitations.includes(release), 'limitations release mismatch');
   assert(!html.includes('v17-audit-20260715'), 'old release identity still present');
+});
+
+run('artifact matches the rendered source template and manifest metadata', () => {
+  const root = path.join(__dirname, '..');
+  const { html: renderedHtml, manifestSha256 } = renderArtifact(root, manifest);
+  assert.strictEqual(html, renderedHtml, 'committed artifact should exactly match the rendered source template');
+  assert(html.includes(`content="${manifestSha256}"`), 'artifact should include the rendered stable manifest hash');
 });
 
 run('external CO2 boundary marks closed CO2 residual not applicable', () => {

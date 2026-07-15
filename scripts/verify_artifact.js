@@ -1,18 +1,10 @@
-const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { loadManifest, renderArtifact } = require('./release_utils');
 
 const root = path.join(__dirname, '..');
-function stableArtifactManifestHash(manifest) {
-  const clone = JSON.parse(JSON.stringify(manifest));
-  if (clone.files && typeof clone.files === 'object') {
-    delete clone.files['metabolic_depletion_forecaster.html'];
-  }
-  return crypto.createHash('sha256').update(JSON.stringify(clone, null, 2)).digest('hex').toUpperCase();
-}
-const manifestText = fs.readFileSync(path.join(root, 'AUDIT_MANIFEST.json'), 'utf8');
-const manifest = JSON.parse(manifestText);
-const manifestSha256 = stableArtifactManifestHash(manifest);
+const manifest = loadManifest(root);
+const { html: expectedHtml, manifestSha256, templatePath } = renderArtifact(root, manifest);
 const files = {
   html: fs.readFileSync(path.join(root, 'metabolic_depletion_forecaster.html'), 'utf8'),
   readme: fs.readFileSync(path.join(root, 'README.md'), 'utf8'),
@@ -23,6 +15,7 @@ const files = {
 
 const release = manifest.release;
 const checks = [
+  [files.html === expectedHtml, `artifact content does not match rendered source template ${path.relative(root, templatePath)}`],
   [files.html.includes(`release: ${release}`), 'artifact comment release mismatch'],
   [files.html.includes(`data-release="${release}"`), 'body release mismatch'],
   [files.html.includes(`content="${release}"`), 'meta release mismatch'],

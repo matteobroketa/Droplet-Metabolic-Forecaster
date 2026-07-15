@@ -10,7 +10,7 @@ Primary regression command:
 node tests/audit_regression.js
 ```
 
-Current minimum enforced checks: `64`
+Current minimum enforced checks: `65`
 
 The regression suite covers:
 
@@ -66,4 +66,4 @@ The browser smoke test verifies:
 - Oil-phase CO2 is not yet included in the tracked-carbon residual.
 - Bulk nutrients remain mean-field even when oxygen uses grouped droplet states.
 - Calibration currently fits only transport half-times from O₂ series; it does not yet provide joint identifiability against metabolic-rate uncertainty or pH data.
-- The standalone artifact is still monolithic; build currently verifies the committed artifact rather than regenerating it from split source modules.
+- The standalone artifact is now regenerated from a source template, but the source is still not split into fine-grained model modules.

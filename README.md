@@ -27,6 +27,8 @@ Current release status:
 
 Open `metabolic_depletion_forecaster.html` in a browser.
 
+The committed standalone artifact is generated from `src/standalone_artifact.template.html` plus the current audit-manifest metadata.
+
 Run regression checks with:
 
 ```bash
