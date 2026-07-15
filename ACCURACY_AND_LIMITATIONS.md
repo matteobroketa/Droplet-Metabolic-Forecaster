@@ -4,6 +4,25 @@ The Metabolic Depletion Forecaster estimates how long cells may remain in a drop
 
 The result should be read as a **planning estimate**, not as a guaranteed incubation limit. Real cultures vary with passage number, medium, serum, oxygen tension, pH, cell density, adaptation state, and the actual gas-exchange geometry of the device.
 
+## What is corrected in this release
+
+- Closed-headspace O₂ and tracked CO₂ are updated in conserved amounts rather than concentration clamps.
+- Initial aqueous, oil, reservoir, and closed-headspace oxygen states are independent of the selected boundary gas.
+- Bulk proliferation uses Poisson occupancy classes, so empty droplets do not contribute carrying capacity.
+- Droplet exchange scales with droplet size through an area-to-volume relation.
+- Respiratory O₂ uptake is limited by local O₂ using a Michaelis-Menten term and cannot exceed available oxygen.
+- Endpoint times are interpolated within solver substeps instead of being reported only on 0.5 min boundaries.
+- Accepted partial steps now update cumulative O₂/CO₂ counters only for the accepted fraction of the step.
+- Closed zero-headspace configurations disable headspace gas exchange rather than transferring mass into a zero-volume gas compartment.
+- Closed tracked-CO₂ residuals are only meaningful in finite closed-headspace CO₂ mass-balance mode. External CO₂ reservoir modes are not treated as closed carbon balances.
+- Exchange half-times can be entered either as reference values to be geometry-scaled or as measured-effective values for the exact current configuration.
+
+## Remaining important limitations
+
+- The pH layer is still heuristic. It uses bicarbonate, dissolved CO₂, lactate, and a buffer-capacity approximation, not a full DIC and alkalinity solver.
+- Bulk nutrients are not resolved by occupancy class; bulk O₂ and CO₂ remain mean-field shared states.
+- Growth remains a logistic approximation and is not fully coupled to all environmental stressors.
+
 ## What the tool predicts
 
 The tool estimates the earliest limiting endpoint among:
