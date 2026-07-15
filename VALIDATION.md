@@ -52,11 +52,18 @@ The browser smoke test verifies:
 - current release label on load
 - artifact commit and manifest hash metadata are stamped
 - default calculation renders
+- keyboard activation can switch tabs
 - worker-backed long runs expose cancel status
 - measured-effective mode renders diagnostics
+- reference-scaled mode renders diagnostics
 - calibration UI runs and renders a best-fit summary
+- inactive custom cell/gas fields are ignored while active invalid custom fields block calculation
+- closed tracked-carbon mode and external CO₂ mode render distinct diagnostics
 - incompatible finite-headspace carbon mode blocks calculation
 - anoxic selected-gas thresholds are rejected
+- grouped transport mode, vessel synchronization, and presets update visible controls
+- CSV, JSON, data, PNG, and clipboard export paths trigger successfully
+- versioned local-state restore survives reload and ignores stale legacy-key state
 - no rendered `NaN` or `Infinity`
 - no console errors
 
