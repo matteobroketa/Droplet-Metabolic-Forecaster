@@ -11,7 +11,7 @@ node scripts/check_syntax.js
 node tests/audit_regression.js
 ```
 
-Current minimum enforced checks: `69`
+Current minimum enforced checks: `70`
 
 The regression suite covers:
 
