@@ -7,6 +7,18 @@ const SOURCE_SCRIPT_ROOTS = [
   path.join('src', 'ui'),
 ];
 
+function normalizeTextForReleaseHash(text) {
+  return String(text).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+}
+
+function canonicalTextSha256(text) {
+  return crypto.createHash('sha256').update(normalizeTextForReleaseHash(text), 'utf8').digest('hex').toUpperCase();
+}
+
+function canonicalFileSha256(filePath) {
+  return canonicalTextSha256(fs.readFileSync(filePath, 'utf8'));
+}
+
 function stableArtifactManifestHash(manifest) {
   const clone = JSON.parse(JSON.stringify(manifest));
   if (clone.files && typeof clone.files === 'object') {
@@ -35,7 +47,7 @@ function loadAppScript(root) {
   }
   const appScript = appSourceFiles
     .map((filePath) => {
-      const text = fs.readFileSync(filePath, 'utf8');
+      const text = normalizeTextForReleaseHash(fs.readFileSync(filePath, 'utf8'));
       return text.endsWith('\n') ? text : `${text}\n`;
     })
     .join('');
@@ -51,7 +63,7 @@ function renderArtifact(root, manifest = loadManifest(root)) {
     throw new Error('Artifact source template missing: src/standalone_artifact.template.html');
   }
   const manifestSha256 = stableArtifactManifestHash(manifest);
-  const template = fs.readFileSync(templatePath, 'utf8');
+  const template = normalizeTextForReleaseHash(fs.readFileSync(templatePath, 'utf8'));
   const { appScript, appSourceFiles } = loadAppScript(root);
   if (!template.includes(APP_SCRIPT_PLACEHOLDER)) {
     throw new Error('Artifact source template is missing the app-script placeholder.');
@@ -69,5 +81,8 @@ module.exports = {
   loadAppScript,
   renderArtifact,
   SOURCE_SCRIPT_ROOTS,
+  normalizeTextForReleaseHash,
+  canonicalTextSha256,
+  canonicalFileSha256,
   stableArtifactManifestHash,
 };

@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { loadManifest, renderArtifact } = require('../scripts/release_utils');
+const { loadManifest, renderArtifact, canonicalTextSha256, canonicalFileSha256 } = require('../scripts/release_utils');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'metabolic_depletion_forecaster.html'), 'utf8');
 const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
@@ -1023,6 +1023,12 @@ run('artifact matches the rendered source template and manifest metadata', () =>
   const { html: renderedHtml, manifestSha256 } = renderArtifact(root, manifest);
   assert.strictEqual(html, renderedHtml, 'committed artifact should exactly match the rendered source template');
   assert(html.includes(`content="${manifestSha256}"`), 'artifact should include the rendered stable manifest hash');
+});
+
+run('manifest file hashes use canonical LF text bytes for public raw parity', () => {
+  const root = path.join(__dirname, '..');
+  assert.strictEqual(manifest.files['metabolic_depletion_forecaster.html'], canonicalTextSha256(html), 'artifact hash should use canonical text bytes');
+  assert.strictEqual(manifest.files['README.md'], canonicalFileSha256(path.join(root, 'README.md')), 'README hash should use canonical text bytes');
 });
 
 run('external CO2 boundary marks closed CO2 residual not applicable', () => {
