@@ -28,6 +28,7 @@ Current release status:
 Open `metabolic_depletion_forecaster.html` in a browser.
 
 The committed standalone artifact is generated deterministically from `src/standalone_artifact.template.html`, the ordered `src/model/*.js` and `src/ui/*.js` source modules, and the current audit-manifest metadata.
+The current source layout keeps runtime data in `src/data/`, model constants/bootstrap in `src/model/00_model_and_solver.js`, extracted pure simulation and calibration logic in `src/model/10_engine_and_calibration.js`, and DOM/export logic in `src/ui/10_ui_and_exports.js`.
 Scientific runtime defaults for cell lines, media, oils, and reference rows now live in `src/data/*.json`; the offline runtime bundle in `src/model/00_data.generated.js` is generated deterministically from those source catalogs.
 
 Run regression checks with:

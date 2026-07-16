@@ -45,6 +45,7 @@ const requiredFiles = [
   'scripts/release_utils.js',
   'scripts/source_data_utils.js',
   'src/model/00_data.generated.js',
+  'src/model/10_engine_and_calibration.js',
   'src/standalone_artifact.template.html',
   'src/model/00_model_and_solver.js',
   'src/ui/10_ui_and_exports.js',

@@ -478,6 +478,7 @@ run('artifact render assembles ordered source modules and clears the script plac
   const { html: renderedHtml, appSourceFiles } = renderArtifact(path.join(__dirname, '..'), manifest);
   assert(appSourceFiles.includes('src/model/00_data.generated.js'), 'artifact render should include generated runtime data bundle');
   assert(appSourceFiles.includes('src/model/00_model_and_solver.js'), 'artifact render should include model/solver source module');
+  assert(appSourceFiles.includes('src/model/10_engine_and_calibration.js'), 'artifact render should include extracted engine/calibration source module');
   assert(appSourceFiles.includes('src/ui/10_ui_and_exports.js'), 'artifact render should include UI/export source module');
   assert(renderedHtml.includes('function captureRawInputs(){'), 'assembled artifact should include UI/export script content');
   assert(!renderedHtml.includes('__ARTIFACT_APP_SCRIPT__'), 'assembled artifact should not keep the script placeholder');

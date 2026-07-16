@@ -17,6 +17,13 @@ This artifact is a standalone planning model for droplet emulsions and small-vol
 
 Authoritative runtime defaults for cell lines, media, oils, and reference rows are stored separately in `src/data/*.json`. Those source catalogs are compiled deterministically into `src/model/00_data.generated.js`, which is then bundled into the standalone artifact with the remaining ordered model and UI source modules.
 
+The current ordered source modules are:
+
+- `src/model/00_data.generated.js`
+- `src/model/00_model_and_solver.js`
+- `src/model/10_engine_and_calibration.js`
+- `src/ui/10_ui_and_exports.js`
+
 ## Oxygen transport
 
 Fluorinated oil remains the dominant reversible oxygen reservoir. Cells are the irreversible oxygen sink.
