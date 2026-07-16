@@ -14,15 +14,9 @@ This artifact is a standalone planning model for droplet emulsions and small-vol
 - reservoir-oil oxygen
 - optional finite headspace oxygen
 - target-droplet glucose, glutamine, lactate, tracked aqueous carbon, and selectable pH model
+- grouped empty / single-cell / multicell bulk glucose, glutamine, and lactate
 
-Authoritative runtime defaults for cell lines, media, oils, and reference rows are stored separately in `src/data/*.json`. Those source catalogs are compiled deterministically into `src/model/00_data.generated.js`, which is then bundled into the standalone artifact with the remaining ordered model and UI source modules.
-
-The current ordered source modules are:
-
-- `src/model/00_data.generated.js`
-- `src/model/00_model_and_solver.js`
-- `src/model/10_engine_and_calibration.js`
-- `src/ui/10_ui_and_exports.js`
+The standalone HTML is authoritative and contains all runtime code and data. Supporting `src/data/*.json` catalogs are verification/provenance views only; they cannot generate the product. Temporary modular extraction is allowed only from the canonical HTML into ignored `.tmp/` files.
 
 ## Oxygen transport
 
@@ -67,6 +61,13 @@ Interactive runs are dispatched to a background Web Worker when the browser supp
 
 Bulk proliferation uses Poisson occupancy classes. Multicell growth is evaluated as an occupancy-weighted sum across classes with `k >= 2`; it is not approximated by a mean seed occupancy.
 
+Two growth modes are available:
+
+- `stress_limited`
+  Default mode. Evolves the existing accepted-step population state and multiplies the effective logistic rate by the minimum of local O₂, glucose, glutamine, lactate, and pH stress fractions.
+- `legacy_logistic`
+  Backward-comparison mode. Uses the same stateful accepted-step update with environmental stress fixed to one.
+
 ## Deterministic uncertainty scenarios
 
 The artifact can also run three deterministic demand scenarios:
@@ -93,7 +94,7 @@ Supported fit modes are:
 - `gasHalf`
 - `dropHalf+oilHalf`
 
-The fitter uses the same `Engine.simulate(...)` path as normal predictions, samples the measurement horizon only, interpolates the chosen observable at each measurement time, and minimizes summed squared error on a log-spaced search grid. Reported diagnostics include residuals, profile-style accepted ranges, and a likelihood-weighted local log-parameter correlation for two-parameter fits.
+The fitter uses the same implicit coupled transport solve as normal predictions, disables forecast endpoints so every observation is evaluated, and uses a coarse logarithmic search followed by local refinement. It returns model-evaluation count, accepted/rejected steps, minimum/median timestep, wall time, endpoint behavior, and estimated-versus-actual workload. The documented ordinary five-to-six-hour single-parameter budget is 5 seconds and fewer than 30,000 accepted steps in the regression fixture.
 
 Calibration is intentionally conservative about identifiability. It warns when accepted ranges stay broad, when the optimum lands on the search boundary, or when two fitted parameters remain strongly correlated. The workflow does not yet recalibrate metabolic rates, nutrient kinetics, or pH chemistry.
 
@@ -133,9 +134,11 @@ Tracked carbon currently includes:
 
 - target aqueous tracked carbon
 - grouped bulk aqueous tracked carbon
+- optional emulsion-oil dissolved CO2 only when the user enables an unvalidated planning override
+- optional reservoir-oil dissolved CO2 only when the user enables an unvalidated planning override
 - finite closed headspace CO2 when `pHBoundaryMode = closed_headspace_mass_balance`
 
-In `carbonate_alkalinity`, aqueous tracked carbon is DIC and the gas-exchange solve uses the dissolved-CO2 fraction implied by the current carbonate speciation. In `heuristic_legacy`, aqueous tracked carbon remains dissolved CO2. Oil-phase CO2 is not yet tracked, so residuals remain labeled as tracked aqueous + headspace carbon residuals rather than full closed-carbon residuals.
+In `carbonate_alkalinity`, aqueous tracked carbon is DIC and gas exchange uses the dissolved-CO2 fraction implied by current carbonate speciation. No oxygen capacity ratio, reference, half-time, or universal conversion factor is reused for CO2. All default oil CO2 capacities are zero; an enabled oil node requires user-supplied CO2 capacity and CO2-specific gas/oil/droplet half-times labeled as unvalidated planning assumptions.
 
 ## pH
 
@@ -146,4 +149,4 @@ Two pH modes are available:
 - `heuristic_legacy`
   Backward-comparison mode. Uses the older Henderson-Hasselbalch bicarbonate/CO2 approximation with empirical buffer correction.
 
-Even in `carbonate_alkalinity`, this is not yet a full explicit-medium chemistry model: ionic-strength effects, explicit HEPES/protein species, ammonia chemistry, and oil-phase CO2 are still simplified or omitted.
+Even in `carbonate_alkalinity`, this is not yet a full explicit-medium chemistry model: ionic-strength effects, explicit HEPES/protein species, ammonia chemistry, and full oil chemistry beyond dissolved CO2 are still simplified or omitted.

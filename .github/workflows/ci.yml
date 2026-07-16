@@ -7,6 +7,7 @@ on:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,17 +18,19 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium firefox webkit
       - name: Verify model data bundle
         run: npm run verify:data
       - name: Check JavaScript syntax
         run: npm run check:syntax
       - name: Run Node regression suite
+        timeout-minutes: 3
         run: npm test
       - name: Run browser verification
+        timeout-minutes: 10
         run: npm run test:browser
-      - name: Rebuild standalone artifact
+      - name: Validate and extract canonical artifact
         run: npm run build
       - name: Verify parameter provenance
         run: npm run verify:provenance
@@ -35,5 +38,7 @@ jobs:
         run: npm run verify:artifact
       - name: Verify audit manifest
         run: npm run verify:manifest
-      - name: Require clean tracked tree after rebuild
+      - name: Verify HTML remains canonical
+        run: npm run verify:html-is-canonical
+      - name: Require clean tracked tree after support commands
         run: git diff --exit-code

@@ -18,10 +18,12 @@ Audited release:
 - Endpoint times are interpolated within solver substeps instead of being reported only on 0.5 min boundaries.
 - Accepted partial steps now update cumulative O₂/CO₂ counters only for the accepted fraction of the step.
 - Closed zero-headspace configurations disable headspace gas exchange rather than transferring mass into a zero-volume gas compartment.
-- Tracked aqueous + headspace CO₂ residuals are only meaningful in finite closed-headspace CO₂ mass-balance mode. External CO₂ reservoir modes are not treated as closed carbon balances, and oil-phase CO₂ is still outside the tracked inventory.
+- Tracked carbon residuals are only meaningful in finite closed-headspace CO₂ mass-balance mode. Default oil-phase CO₂ capacity is zero for every oil because the available records do not provide CO₂-specific capacity evidence. Optional oil storage requires user-supplied capacity and CO₂ transport assumptions and is explicitly labeled unvalidated.
 - Exchange half-times can be entered either as reference values to be geometry-scaled or as measured-effective values for the exact current configuration.
 - Bulk O₂ keeps fluorinated oil as the dominant shared reversible reservoir. The app compares sampled oil-mediated droplet equilibration against local occupied-droplet depletion, keeps the shared mean-field model when equilibration stays fast, and exposes a conservative grouped empty/single/multi comparison only when local depletion is comparable to or faster than oil-mediated transport. Even then, grouped droplets still exchange through the shared oil phase rather than acting as permanently isolated oxygen pools.
+- Bulk nutrients and lactate are now resolved by occupancy class. Empty, single-cell, and multi-cell bulk droplets can diverge in nutrient history even while O₂ still communicates through the shared oil reservoir.
 - Rate inputs can be interpreted either as 37 °C reference rates with Q10 scaling or as already measured at the selected temperature with no Q10 scaling.
+- Proliferation now evolves existing population state on each accepted step. Stress-limited growth responds to local O₂, glucose, glutamine, lactate, and pH; legacy growth uses the same stateful step with stress fixed to one.
 - Deterministic low-demand, nominal, and high-demand scenario runs are available when stored metabolic-rate bounds exist for the selected line. These are bound sweeps, not probabilistic intervals.
 - The diagnostics tab can now fit pasted O₂ time series against selected transport half-times for the exact current setup, reporting residuals, profile-style ranges, local parameter correlation for two-parameter fits, and explicit identifiability warnings when the data are weak.
 - JSON exports now include reproducibility metadata: audited release, audited source commit, audit-manifest SHA-256, raw inputs, effective parameters, parameter provenance, actual conductances, solver settings, warnings, and deterministic scenario outputs.
@@ -31,8 +33,9 @@ Audited release:
 ## Remaining important limitations
 
 - The default pH layer now uses a carbonate/alkalinity solve with aqueous DIC, bicarbonate/carbonate speciation, water dissociation, lactate acid equivalents, and linear non-bicarbonate buffer alkalinity. The legacy heuristic bicarbonate/CO₂ mode remains available for backward comparison.
-- Bulk nutrients are not resolved by occupancy class. Bulk O₂ can be shared or grouped depending on the selected or inferred transport regime, but nutrient depletion remains mean-field.
-- Growth remains a logistic approximation and is not fully coupled to all environmental stressors.
+- Even with grouped bulk nutrients, nutrient exchange among droplets is still not modeled; empty droplets remain chemically static rather than exchanging glucose, glutamine, or lactate through oil.
+- Growth now responds to local O₂, glucose, glutamine, lactate, and pH stress, but it remains a logistic approximation with no explicit death term or full coupling to all stress-response biology.
+- Oil CO₂ storage and transport remain scientifically unvalidated. The defaults are disabled; a nonzero user override is a planning sensitivity only, not a measured material property.
 
 ## What the tool predicts
 
@@ -109,7 +112,7 @@ Important risk areas:
 - **Suspension vs adherent culture:** the same line can show different rates after suspension adaptation.
 - **Tier C fallback lines:** fallback medians prevent missing data, but they are not line-specific validation.
 - **Gas-exchange geometry:** a static deep emulsion can behave very differently from a mixed oil reservoir, gas-permeable tubing, or an incubator-exposed thin layer.
-- **pH forecasts:** pH now uses a stronger carbonate/alkalinity model, but it is still not a full ionic-strength, explicit-medium, charge-balance solver. Oil-phase CO₂ is still outside the tracked carbon inventory, and explicit HEPES/protein speciation is still approximated through linear non-bicarbonate buffer capacity.
+- **pH forecasts:** pH uses a stronger carbonate/alkalinity model, but it is still not a full ionic-strength, explicit-medium, charge-balance solver. Explicit HEPES/protein speciation is approximated through linear non-bicarbonate buffer capacity, and oil-phase CO₂ is disabled unless the user supplies unvalidated planning assumptions.
 
 ## Examples from public-rate comparisons
 

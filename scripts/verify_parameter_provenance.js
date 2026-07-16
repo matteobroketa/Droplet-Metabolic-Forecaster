@@ -10,7 +10,7 @@ if (!fs.existsSync(provenancePath)) {
 }
 
 const expected = JSON.stringify(buildParameterProvenance(root), null, 2) + '\n';
-const actual = fs.readFileSync(provenancePath, 'utf8');
+const actual = fs.readFileSync(provenancePath, 'utf8').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
 if (actual !== expected) {
   throw new Error('Parameter provenance file is stale. Run node scripts/build_parameter_provenance.js');

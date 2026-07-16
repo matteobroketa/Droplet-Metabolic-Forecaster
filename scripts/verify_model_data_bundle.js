@@ -1,18 +1,19 @@
 const fs = require('fs');
 const path = require('path');
-const { renderModelDataBundle } = require('./source_data_utils');
+const assert = require('assert');
+const { loadSourceData } = require('./source_data_utils');
 
 const root = path.join(__dirname, '..');
-const bundlePath = path.join(root, 'src', 'model', '00_data.generated.js');
+const html = fs.readFileSync(path.join(root, 'metabolic_depletion_forecaster.html'), 'utf8');
+const start = html.indexOf('const DATA=');
+const end = html.indexOf('const PHYS=');
+if (start < 0 || end <= start) throw new Error('Could not locate canonical embedded runtime data.');
 
-if (!fs.existsSync(bundlePath)) {
-  throw new Error('Missing src/model/00_data.generated.js');
+const runtimeData = new Function('document', `${html.slice(start, end)}\nreturn DATA;`)({ currentScript: null });
+const { DATA: catalogs } = loadSourceData(root);
+
+for (const key of ['cellLines', 'media', 'oils', 'refs']) {
+  assert.deepStrictEqual(runtimeData[key], catalogs[key], `Canonical embedded ${key} differs from supporting catalog.`);
 }
 
-const expected = renderModelDataBundle(root);
-const actual = fs.readFileSync(bundlePath, 'utf8');
-if (actual !== expected) {
-  throw new Error('Model data bundle is stale. Run node scripts/build_model_data_bundle.js');
-}
-
-console.log('Model data bundle verification passed.');
+console.log('Canonical embedded data verification passed against supporting catalogs.');

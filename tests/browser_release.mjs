@@ -1,14 +1,25 @@
 import path from 'node:path';
-import { chromium } from 'playwright';
+import { chromium, firefox, webkit } from 'playwright';
 
 const RELEASE = 'v18-transport-20260715';
 const STATE_KEY = 'metabolic-forecaster-v18-transport-20260715';
 const LEGACY_STATE_KEY = 'metabolic-forecaster-v17-audit-20260715';
 const artifactPath = path.resolve('metabolic_depletion_forecaster.html').replace(/\\/g, '/');
 const url = `file:///${artifactPath}`;
-const browser = await chromium.launch({ headless: true });
+async function runBrowser(browserType, browserName) {
+let browser;
+try {
+  browser = await browserType.launch({ headless: true });
+} catch (error) {
+  if (/Executable doesn't exist|browserType\.launch/i.test(String(error))) {
+    console.log(`SKIP ${browserName}: Playwright browser is not installed on this platform.`);
+    return { browserName, status: 'skipped' };
+  }
+  throw error;
+}
 const page = await browser.newPage();
 const consoleErrors = [];
+const externalRequests = [];
 
 await page.addInitScript(({ stateKey }) => {
   window.__downloads = [];
@@ -47,6 +58,9 @@ page.on('console', (msg) => {
 });
 page.on('pageerror', (error) => {
   consoleErrors.push(String(error));
+});
+page.on('request', (request) => {
+  if (!/^(?:file|data|blob):/i.test(request.url())) externalRequests.push(request.url());
 });
 
 function assert(condition, message) {
@@ -107,7 +121,23 @@ assert((await page.locator('body').getAttribute('data-release')) === RELEASE, 's
 assert(((await page.locator('meta[name="artifact-commit"]').getAttribute('content')) || '').length === 40, 'artifact commit metadata missing');
 assert(((await page.locator('meta[name="artifact-manifest-sha256"]').getAttribute('content')) || '').length === 64, 'artifact manifest hash metadata missing');
 assert((await page.locator('#pHModel').inputValue()) === 'carbonate_alkalinity', 'default pH model should be carbonate/alkalinity');
+assert((await page.locator('#growthModel').inputValue()) === 'stress_limited', 'default growth model should be stress-limited');
 assert((await page.locator('#safeTime').textContent()).trim().length > 0, 'default calculation missing');
+assert((await page.locator('#chartAlternative').textContent()).includes('Timeline from'), 'chart text alternative missing');
+const unlabeledInputs = await page.evaluate(() => [...document.querySelectorAll('input[id],select[id],textarea[id]')].filter((el) => !document.querySelector(`label[for="${el.id}"]`) && !el.closest('label') && !el.getAttribute('aria-label') && !el.getAttribute('aria-labelledby')).map((el) => el.id));
+assert(unlabeledInputs.length === 0, `form controls lack accessible labels: ${unlabeledInputs.join(', ')}`);
+
+await page.click('#helpBtn');
+assert(await page.locator('#helpDialog').evaluate((el) => el.classList.contains('open') && el.getAttribute('role') === 'dialog'), 'help dialog did not open accessibly');
+await page.keyboard.press('Escape');
+assert(!(await page.locator('#helpDialog').evaluate((el) => el.classList.contains('open'))), 'Escape should close help dialog');
+await page.click('#equationsBtn');
+assert(await page.locator('#equationsDialog').evaluate((el) => el.classList.contains('open')), 'equations dialog did not open');
+await page.click('#closeEquationsBtn');
+
+await settleAfter(() => page.selectOption('#growthModel', 'legacy_logistic', { force: true }));
+assert((await page.locator('#growthModel').inputValue()) === 'legacy_logistic', 'legacy growth selector did not run');
+await settleAfter(() => page.selectOption('#growthModel', 'stress_limited', { force: true }));
 
 await page.focus('[data-tab="diagnostics"]');
 await page.keyboard.press('Enter');
@@ -170,6 +200,27 @@ await settleAfter(async () => {
 const closedCarbonText = await page.locator('#gasCards').textContent();
 assert(closedCarbonText.includes('headspace CO₂'), 'closed finite-headspace run should report a tracked headspace-carbon residual');
 assert(!closedCarbonText.includes('not applicable'), 'closed finite-headspace run should not mark tracked carbon residual as not applicable');
+assert(closedCarbonText.includes('Oil CO₂ capacity ratio'), 'closed finite-headspace run should report oil CO₂ capacity metadata');
+
+await page.evaluate(() => {
+  const set = (id, value) => { const el = document.getElementById(id); if (el) el.value = value; };
+  set('cellLine', 'custom'); set('customOCR', '0'); set('customGCR', '0'); set('customLPR', '0'); set('customGlnCR', '0');
+  set('vesselPreset', 'custom'); set('vesselPresetEnv', 'custom'); set('atmMode', 'closed'); set('pHBoundaryMode', 'closed_headspace_mass_balance');
+  set('headspaceVolume', '0'); set('o2ThresholdMode', 'absolute_uM'); set('hypoxiaPct', '1'); set('initAqO2Pct', '100'); set('initOilO2Pct', '100'); set('initReservoirO2Pct', '100'); set('maxDays', '0.25'); set('bulkO2Mode', 'auto');
+});
+await calculate(15000);
+const zeroHeadspaceProbe = await page.evaluate(() => ({
+  limiter: window.lastResult?.limiter,
+  safeMin: window.lastResult?.safeMin,
+  maxMin: (window.lastResult?.params?.maxDays || 0) * 24 * 60,
+  gasRes: window.lastResult?.conductances?.fmolPerMinPerUM?.gasRes,
+  gasDirect: window.lastResult?.conductances?.fmolPerMinPerUM?.gasDirect,
+  boundaryNet: window.lastResult?.initialFlux?.boundaryNet,
+  capacityResidual: (window.lastResult?.capacities?.capEmpty || 0) + (window.lastResult?.capacities?.capSingle || 0) + (window.lastResult?.capacities?.capMulti || 0) - (window.lastResult?.capacities?.capBulk || 0),
+}));
+assert(zeroHeadspaceProbe.limiter === 'simulation horizon' && Math.abs(zeroHeadspaceProbe.safeMin - zeroHeadspaceProbe.maxMin) < 1e-6, 'zero-headspace browser run stopped before horizon');
+assert(zeroHeadspaceProbe.gasRes === 0 && zeroHeadspaceProbe.gasDirect === 0 && zeroHeadspaceProbe.boundaryNet === 0, 'zero-headspace browser run retained a gas boundary');
+assert(Math.abs(zeroHeadspaceProbe.capacityResidual) < 1e-9, 'auto-mode occupancy capacities do not reconcile');
 
 await settleAfter(async () => {
   await page.selectOption('#atmMode', 'incubator', { force: true });
@@ -224,11 +275,14 @@ await page.click('[data-tab="diagnostics"]');
 await page.click('#exportCsvBtn');
 await page.click('#exportJsonBtn');
 await page.waitForFunction(() => window.__downloads.some((entry) => entry.name === 'metabolic_depletion_forecaster_log.csv') && window.__downloads.some((entry) => entry.name === 'metabolic_depletion_forecaster_result.json'), null, { timeout: 5000 });
+await page.waitForFunction(() => window.__downloads.filter((entry) => entry.name === 'metabolic_depletion_forecaster_log.csv' || entry.name === 'metabolic_depletion_forecaster_result.json').every((entry) => typeof entry.text === 'string'), null, { timeout: 5000 });
 const downloads = await page.evaluate(() => window.__downloads.map((entry) => ({ name: entry.name, text: entry.text })));
 const csvDownload = downloads.find((entry) => entry.name === 'metabolic_depletion_forecaster_log.csv');
 const jsonDownload = downloads.find((entry) => entry.name === 'metabolic_depletion_forecaster_result.json');
 assert(csvDownload && csvDownload.text && csvDownload.text.includes('time_h,target_o2_uM'), 'CSV export content missing');
 assert(jsonDownload && jsonDownload.text && jsonDownload.text.includes('"release": "v18-transport-20260715"'), 'JSON export content missing');
+assert(jsonDownload && jsonDownload.text && jsonDownload.text.includes('"growthModel": "stress_limited"'), 'JSON export should include growth model metadata');
+assert(jsonDownload && jsonDownload.text && jsonDownload.text.includes('"groupedBulkNutrients"'), 'JSON export should include grouped bulk nutrient summaries');
 
 await page.click('#savePngBtn');
 await page.waitForFunction(() => (window.__lastAnchorDownload?.download || '') === 'metabolic_depletion_timeline_highres.png', null, { timeout: 5000 });
@@ -243,6 +297,12 @@ await waitForCompletedRender();
 assert((await page.locator('html').getAttribute('data-theme')) === 'dark', 'current release state should restore dark theme');
 assert((await activeTab()) === 'references', 'current release state should restore the saved tab');
 assert((await page.locator('#halfTimeMode').inputValue()) === 'measured_effective', 'current release state should restore measured-effective mode');
+
+await page.evaluate((stateKey) => localStorage.setItem(stateKey, '{malformed-json'), STATE_KEY);
+await page.reload();
+await page.waitForSelector('#safeTime');
+await waitForCompletedRender();
+assert((await page.locator('#safeTime').textContent()).trim().length > 0, 'malformed saved state should recover to a working calculation');
 
 await page.click('[data-tab="setup"]');
 await page.evaluate(() => {
@@ -271,4 +331,12 @@ assert(!/NaN|Infinity/.test(renderedText), 'rendered output contains nonfinite v
 assert(consoleErrors.length === 0, `console errors detected: ${consoleErrors.join(' | ')}`);
 
 await browser.close();
-console.log('Browser verification passed.');
+assert(externalRequests.length === 0, `${browserName} made external requests: ${externalRequests.join(' | ')}`);
+console.log(`${browserName} browser verification passed.`);
+return { browserName, status: 'passed' };
+}
+
+const matrix = [];
+const requestedBrowsers = new Set(String(process.env.PLAYWRIGHT_BROWSERS || 'Chromium,Firefox,WebKit').split(',').map((name) => name.trim().toLowerCase()));
+for (const [browserName, browserType] of [['Chromium', chromium], ['Firefox', firefox], ['WebKit', webkit]]) if (requestedBrowsers.has(browserName.toLowerCase())) matrix.push(await runBrowser(browserType, browserName));
+console.log(`Browser matrix: ${matrix.map((entry) => `${entry.browserName}=${entry.status}`).join(', ')}`);

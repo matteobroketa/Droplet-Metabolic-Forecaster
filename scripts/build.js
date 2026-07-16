@@ -1,20 +1,16 @@
-const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
-const { loadManifest, renderArtifact } = require('./release_utils');
+const { canonicalFileSha256 } = require('./release_utils');
 
 const root = path.join(__dirname, '..');
-const artifact = path.join(root, 'metabolic_depletion_forecaster.html');
+const artifactPath = path.join(root, 'metabolic_depletion_forecaster.html');
+const before = canonicalFileSha256(artifactPath);
 
-if (!fs.existsSync(artifact)) {
-  throw new Error('Standalone artifact missing: metabolic_depletion_forecaster.html');
+for (const script of ['extract_canonical.js', 'check_syntax.js', 'verify_artifact.js']) {
+  execFileSync(process.execPath, [path.join(__dirname, script)], { cwd: root, stdio: 'inherit' });
 }
-execFileSync(process.execPath, [path.join(__dirname, 'build_model_data_bundle.js')], {
-  cwd: root,
-  stdio: 'inherit',
-});
-const manifest = loadManifest(root);
-const { html, appSourceFiles } = renderArtifact(root, manifest);
-fs.writeFileSync(artifact, html);
 
-console.log(`Build passed: regenerated standalone artifact from src/standalone_artifact.template.html and ${appSourceFiles.length} ordered source module(s) for ${manifest.release}.`);
+const after = canonicalFileSha256(artifactPath);
+if (after !== before) throw new Error(`Canonical HTML changed during build: before ${before}, after ${after}`);
+
+console.log(`Build validation passed without writing canonical HTML: ${after}.`);

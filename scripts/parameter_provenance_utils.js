@@ -31,6 +31,7 @@ const MEDIUM_PARAMETER_SPECS = [
 
 const OIL_PARAMETER_SPECS = [
   ['capacityRatio', 'water-equivalent ratio'],
+  ['co2CapacityRatio', 'water-equivalent ratio'],
   ['defaultDropHalf', 'min'],
 ];
 
@@ -85,6 +86,27 @@ function mediumParameterRecord(medium, parameter, unit) {
 }
 
 function oilParameterRecord(oil, parameter, unit) {
+  if (parameter === 'co2CapacityRatio') {
+    return {
+      parameter,
+      value: cleanValue(oil[parameter]),
+      unit,
+      source: [],
+      exactLineOrProxy: 'Disabled: no CO2-specific capacity evidence record',
+      experimentalConditions: null,
+      conversionPerformed: null,
+      confidenceTier: 'disabled',
+      originalMeasurement: null,
+      originalUnit: null,
+      conversionEquation: null,
+      temperatureC: null,
+      pressureOrGasComposition: null,
+      oilIdentityAndGrade: oil.name || null,
+      uncertaintyOrRange: null,
+      evidenceClassification: oil.co2EvidenceClassification || 'disabled — no CO2-specific evidence record',
+      notes: ['Default oil-phase CO2 capacity is zero. Optional runtime override is labeled "Unvalidated planning assumption — user supplied".'],
+    };
+  }
   return {
     parameter,
     value: cleanValue(oil[parameter]),
@@ -155,6 +177,7 @@ function buildParameterProvenance(root) {
       'confidenceTier',
       'notes',
     ],
+    oilCO2RequiredFields: ['originalMeasurement','originalUnit','conversionEquation','temperatureC','pressureOrGasComposition','oilIdentityAndGrade','uncertaintyOrRange','evidenceClassification'],
     cellLines,
     media,
     oils,

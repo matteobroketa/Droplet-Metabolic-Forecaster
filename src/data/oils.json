@@ -3,6 +3,10 @@
     "id": "hfe7500",
     "name": "HFE-7500 / Novec 7500",
     "capacityRatio": 14,
+    "co2CapacityRatio": 0,
+    "co2CapacityEnabled": false,
+    "co2EvidenceClassification": "disabled — no CO2-specific evidence record",
+    "co2Provenance": null,
     "defaultDropHalf": 8,
     "refs": [
       "Bjork et al. 2015: fluorinated carrier oil can supply oxygen to droplets and has much higher oxygen capacity than water",
@@ -13,6 +17,10 @@
     "id": "novec7100",
     "name": "Novec 7100",
     "capacityRatio": 12,
+    "co2CapacityRatio": 0,
+    "co2CapacityEnabled": false,
+    "co2EvidenceClassification": "disabled — no CO2-specific evidence record",
+    "co2Provenance": null,
     "defaultDropHalf": 10,
     "refs": [
       "Perfluorinated oil planning estimate"
@@ -22,6 +30,10 @@
     "id": "fc40",
     "name": "Fluorinert FC-40",
     "capacityRatio": 20,
+    "co2CapacityRatio": 0,
+    "co2CapacityEnabled": false,
+    "co2EvidenceClassification": "disabled — no CO2-specific evidence record",
+    "co2Provenance": null,
     "defaultDropHalf": 7,
     "refs": [
       "Joensson & Svahn 2012: fluorocarbon oils have superior oxygen transport properties; capacity set near commonly cited ~20× water value"
@@ -31,6 +43,10 @@
     "id": "mineral_oil",
     "name": "Mineral oil",
     "capacityRatio": 2.5,
+    "co2CapacityRatio": 0,
+    "co2CapacityEnabled": false,
+    "co2EvidenceClassification": "disabled — no CO2-specific evidence record",
+    "co2Provenance": null,
     "defaultDropHalf": 45,
     "refs": [
       "Hydrocarbon oil lower oxygen transport estimate",
@@ -41,6 +57,10 @@
     "id": "hexadecane",
     "name": "Hexadecane",
     "capacityRatio": 3.5,
+    "co2CapacityRatio": 0,
+    "co2CapacityEnabled": false,
+    "co2EvidenceClassification": "disabled — no CO2-specific evidence record",
+    "co2Provenance": null,
     "defaultDropHalf": 35,
     "refs": [
       "Hydrocarbon oil estimate"
@@ -50,6 +70,10 @@
     "id": "silicone_oil",
     "name": "Silicone oil",
     "capacityRatio": 8,
+    "co2CapacityRatio": 0,
+    "co2CapacityEnabled": false,
+    "co2EvidenceClassification": "disabled — no CO2-specific evidence record",
+    "co2Provenance": null,
     "defaultDropHalf": 15,
     "refs": [
       "Toepke & Beebe 2006 DOI 10.1039/b612140c"
@@ -59,6 +83,10 @@
     "id": "pdms",
     "name": "PDMS wall / chip phase",
     "capacityRatio": 18,
+    "co2CapacityRatio": 0,
+    "co2CapacityEnabled": false,
+    "co2EvidenceClassification": "disabled — no CO2-specific evidence record",
+    "co2Provenance": null,
     "defaultDropHalf": 6,
     "refs": [
       "Merkel et al. 2000 DOI 10.1021/ma991685o",

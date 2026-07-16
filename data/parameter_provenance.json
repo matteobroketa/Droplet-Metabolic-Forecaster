@@ -23,6 +23,16 @@
     "confidenceTier",
     "notes"
   ],
+  "oilCO2RequiredFields": [
+    "originalMeasurement",
+    "originalUnit",
+    "conversionEquation",
+    "temperatureC",
+    "pressureOrGasComposition",
+    "oilIdentityAndGrade",
+    "uncertaintyOrRange",
+    "evidenceClassification"
+  ],
   "cellLines": {
     "hek293": {
       "entityType": "cellLine",
@@ -45265,6 +45275,27 @@
           ]
         },
         {
+          "parameter": "co2CapacityRatio",
+          "value": 0,
+          "unit": "water-equivalent ratio",
+          "source": [],
+          "exactLineOrProxy": "Disabled: no CO2-specific capacity evidence record",
+          "experimentalConditions": null,
+          "conversionPerformed": null,
+          "confidenceTier": "disabled",
+          "originalMeasurement": null,
+          "originalUnit": null,
+          "conversionEquation": null,
+          "temperatureC": null,
+          "pressureOrGasComposition": null,
+          "oilIdentityAndGrade": "HFE-7500 / Novec 7500",
+          "uncertaintyOrRange": null,
+          "evidenceClassification": "disabled — no CO2-specific evidence record",
+          "notes": [
+            "Default oil-phase CO2 capacity is zero. Optional runtime override is labeled \"Unvalidated planning assumption — user supplied\"."
+          ]
+        },
+        {
           "parameter": "defaultDropHalf",
           "value": 8,
           "unit": "min",
@@ -45303,6 +45334,27 @@
           ]
         },
         {
+          "parameter": "co2CapacityRatio",
+          "value": 0,
+          "unit": "water-equivalent ratio",
+          "source": [],
+          "exactLineOrProxy": "Disabled: no CO2-specific capacity evidence record",
+          "experimentalConditions": null,
+          "conversionPerformed": null,
+          "confidenceTier": "disabled",
+          "originalMeasurement": null,
+          "originalUnit": null,
+          "conversionEquation": null,
+          "temperatureC": null,
+          "pressureOrGasComposition": null,
+          "oilIdentityAndGrade": "Novec 7100",
+          "uncertaintyOrRange": null,
+          "evidenceClassification": "disabled — no CO2-specific evidence record",
+          "notes": [
+            "Default oil-phase CO2 capacity is zero. Optional runtime override is labeled \"Unvalidated planning assumption — user supplied\"."
+          ]
+        },
+        {
           "parameter": "defaultDropHalf",
           "value": 10,
           "unit": "min",
@@ -45337,6 +45389,27 @@
           "confidenceTier": null,
           "notes": [
             "Fluorinert FC-40"
+          ]
+        },
+        {
+          "parameter": "co2CapacityRatio",
+          "value": 0,
+          "unit": "water-equivalent ratio",
+          "source": [],
+          "exactLineOrProxy": "Disabled: no CO2-specific capacity evidence record",
+          "experimentalConditions": null,
+          "conversionPerformed": null,
+          "confidenceTier": "disabled",
+          "originalMeasurement": null,
+          "originalUnit": null,
+          "conversionEquation": null,
+          "temperatureC": null,
+          "pressureOrGasComposition": null,
+          "oilIdentityAndGrade": "Fluorinert FC-40",
+          "uncertaintyOrRange": null,
+          "evidenceClassification": "disabled — no CO2-specific evidence record",
+          "notes": [
+            "Default oil-phase CO2 capacity is zero. Optional runtime override is labeled \"Unvalidated planning assumption — user supplied\"."
           ]
         },
         {
@@ -45378,6 +45451,27 @@
           ]
         },
         {
+          "parameter": "co2CapacityRatio",
+          "value": 0,
+          "unit": "water-equivalent ratio",
+          "source": [],
+          "exactLineOrProxy": "Disabled: no CO2-specific capacity evidence record",
+          "experimentalConditions": null,
+          "conversionPerformed": null,
+          "confidenceTier": "disabled",
+          "originalMeasurement": null,
+          "originalUnit": null,
+          "conversionEquation": null,
+          "temperatureC": null,
+          "pressureOrGasComposition": null,
+          "oilIdentityAndGrade": "Mineral oil",
+          "uncertaintyOrRange": null,
+          "evidenceClassification": "disabled — no CO2-specific evidence record",
+          "notes": [
+            "Default oil-phase CO2 capacity is zero. Optional runtime override is labeled \"Unvalidated planning assumption — user supplied\"."
+          ]
+        },
+        {
           "parameter": "defaultDropHalf",
           "value": 45,
           "unit": "min",
@@ -45413,6 +45507,27 @@
           "confidenceTier": null,
           "notes": [
             "Hexadecane"
+          ]
+        },
+        {
+          "parameter": "co2CapacityRatio",
+          "value": 0,
+          "unit": "water-equivalent ratio",
+          "source": [],
+          "exactLineOrProxy": "Disabled: no CO2-specific capacity evidence record",
+          "experimentalConditions": null,
+          "conversionPerformed": null,
+          "confidenceTier": "disabled",
+          "originalMeasurement": null,
+          "originalUnit": null,
+          "conversionEquation": null,
+          "temperatureC": null,
+          "pressureOrGasComposition": null,
+          "oilIdentityAndGrade": "Hexadecane",
+          "uncertaintyOrRange": null,
+          "evidenceClassification": "disabled — no CO2-specific evidence record",
+          "notes": [
+            "Default oil-phase CO2 capacity is zero. Optional runtime override is labeled \"Unvalidated planning assumption — user supplied\"."
           ]
         },
         {
@@ -45453,6 +45568,27 @@
           ]
         },
         {
+          "parameter": "co2CapacityRatio",
+          "value": 0,
+          "unit": "water-equivalent ratio",
+          "source": [],
+          "exactLineOrProxy": "Disabled: no CO2-specific capacity evidence record",
+          "experimentalConditions": null,
+          "conversionPerformed": null,
+          "confidenceTier": "disabled",
+          "originalMeasurement": null,
+          "originalUnit": null,
+          "conversionEquation": null,
+          "temperatureC": null,
+          "pressureOrGasComposition": null,
+          "oilIdentityAndGrade": "Silicone oil",
+          "uncertaintyOrRange": null,
+          "evidenceClassification": "disabled — no CO2-specific evidence record",
+          "notes": [
+            "Default oil-phase CO2 capacity is zero. Optional runtime override is labeled \"Unvalidated planning assumption — user supplied\"."
+          ]
+        },
+        {
           "parameter": "defaultDropHalf",
           "value": 15,
           "unit": "min",
@@ -45488,6 +45624,27 @@
           "confidenceTier": null,
           "notes": [
             "PDMS wall / chip phase"
+          ]
+        },
+        {
+          "parameter": "co2CapacityRatio",
+          "value": 0,
+          "unit": "water-equivalent ratio",
+          "source": [],
+          "exactLineOrProxy": "Disabled: no CO2-specific capacity evidence record",
+          "experimentalConditions": null,
+          "conversionPerformed": null,
+          "confidenceTier": "disabled",
+          "originalMeasurement": null,
+          "originalUnit": null,
+          "conversionEquation": null,
+          "temperatureC": null,
+          "pressureOrGasComposition": null,
+          "oilIdentityAndGrade": "PDMS wall / chip phase",
+          "uncertaintyOrRange": null,
+          "evidenceClassification": "disabled — no CO2-specific evidence record",
+          "notes": [
+            "Default oil-phase CO2 capacity is zero. Optional runtime override is labeled \"Unvalidated planning assumption — user supplied\"."
           ]
         },
         {

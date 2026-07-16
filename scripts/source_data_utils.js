@@ -48,20 +48,7 @@ function loadSourceData(root) {
   };
 }
 
-function renderModelDataBundle(root) {
-  const { DATA, sourcePaths } = loadSourceData(root);
-  const header = [
-    "'use strict';",
-    '// Generated file. Do not edit manually.',
-    `// Sources: ${Object.values(sourcePaths).join(', ')}`,
-    `const DATA=${JSON.stringify(DATA)};`,
-    '',
-  ].join('\n');
-  return header;
-}
-
 module.exports = {
   loadSourceData,
-  renderModelDataBundle,
   sourceDataPaths,
 };

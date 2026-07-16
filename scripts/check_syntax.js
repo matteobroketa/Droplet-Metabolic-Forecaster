@@ -39,8 +39,6 @@ function checkArtifactInlineScript(filePath) {
 
 const nodeFiles = [
   ...walk(path.join(root, 'scripts'), (filePath) => filePath.endsWith('.js')),
-  ...walk(path.join(root, 'src', 'model'), (filePath) => filePath.endsWith('.js')),
-  ...walk(path.join(root, 'src', 'ui'), (filePath) => filePath.endsWith('.js')),
   ...walk(path.join(root, 'tests'), (filePath) => filePath.endsWith('.js') || filePath.endsWith('.mjs')),
 ];
 

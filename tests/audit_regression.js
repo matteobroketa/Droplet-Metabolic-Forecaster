@@ -1,7 +1,7 @@
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { loadManifest, renderArtifact, canonicalTextSha256, canonicalFileSha256 } = require('../scripts/release_utils');
+const { loadManifest, stableArtifactManifestHash, canonicalTextSha256, canonicalFileSha256 } = require('../scripts/release_utils');
 
 const html = fs.readFileSync(path.join(__dirname, '..', 'metabolic_depletion_forecaster.html'), 'utf8');
 const readme = fs.readFileSync(path.join(__dirname, '..', 'README.md'), 'utf8');
@@ -9,15 +9,14 @@ const limitations = fs.readFileSync(path.join(__dirname, '..', 'ACCURACY_AND_LIM
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'));
 const ciWorkflow = fs.readFileSync(path.join(__dirname, '..', '.github', 'workflows', 'ci.yml'), 'utf8');
 const parameterProvenance = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'data', 'parameter_provenance.json'), 'utf8'));
-const generatedDataBundle = fs.readFileSync(path.join(__dirname, '..', 'src', 'model', '00_data.generated.js'), 'utf8');
 const manifest = loadManifest(path.join(__dirname, '..'));
 const { buildParameterProvenance } = require('../scripts/parameter_provenance_utils');
-const { loadSourceData, renderModelDataBundle } = require('../scripts/source_data_utils');
+const { loadSourceData } = require('../scripts/source_data_utils');
 const start = html.indexOf('const DATA=');
 const end = html.indexOf("window.addEventListener('resize'");
 if (start < 0 || end < 0) throw new Error('Could not locate model code in HTML source.');
 const modelPrelude = `
-const __fallbackDocument={currentScript:null,querySelector:()=>null,querySelectorAll:()=>[],getElementById:()=>null,body:{dataset:{}},createElement:()=>({}),documentElement:{dataset:{}}};
+const __fallbackDocument={currentScript:null,querySelector:()=>null,querySelectorAll:()=>[],getElementById:()=>null,addEventListener(){},body:{dataset:{}},createElement:()=>({}),documentElement:{dataset:{}}};
 const __fallbackWindow={addEventListener(){}};
 const __fallbackNavigator={};
 const __fallbackLocalStorage={getItem(){return null},setItem(){},removeItem(){}};
@@ -56,7 +55,7 @@ const Blob=globalThis.Blob||function(){};
 const model = new Function(
   modelPrelude +
     html.slice(start, end) +
-    '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, carbonateConstants, carbonateSpecies, solveCarbonateState, boundaryEquilibriumPH, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, parseCalibrationSeries, runCalibrationFit, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec, buildRateScenarioResults, buildExportPayload};'
+    '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, carbonateConstants, carbonateSpecies, solveCarbonateState, boundaryEquilibriumPH, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, parseCalibrationSeries, runCalibrationFit, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec, buildRateScenarioResults, buildExportPayload, buildOccupancyGroupExport, toCSV};'
 )();
 
 const {
@@ -93,6 +92,8 @@ const {
   vesselSpec,
   buildRateScenarioResults,
   buildExportPayload,
+  buildOccupancyGroupExport,
+  toCSV,
 } = model;
 
 const AIR_GAS = { o2: 0.2095, co2: 0.0004 };
@@ -142,10 +143,14 @@ function makeParams(overrides = {}) {
     vesselDiameter_mm: overrides.vesselDiameter_mm ?? 6,
     tubingLength_mm: overrides.tubingLength_mm ?? 1000,
     filledTubingLength_mm: overrides.filledTubingLength_mm ?? null,
-    oil: overrides.oil ?? { capacityRatio: 14 },
+    oil: overrides.oil ?? { capacityRatio: 14, co2CapacityRatio: 0, co2CapacityEnabled: false, co2EvidenceClassification: 'disabled — no CO2-specific evidence record', co2Provenance: null },
     gasHalf: overrides.gasHalf ?? 150,
     oilHalf: overrides.oilHalf ?? 480,
     dropHalf: overrides.dropHalf ?? 10,
+    co2GasHalf: overrides.co2GasHalf ?? NaN,
+    co2OilHalf: overrides.co2OilHalf ?? NaN,
+    co2DropHalf: overrides.co2DropHalf ?? NaN,
+    co2AqueousGasHalf: overrides.co2AqueousGasHalf ?? 10,
     surfaceAccess: overrides.surfaceAccess ?? 0.03,
     centerPenalty: overrides.centerPenalty ?? 1,
     gradientFactor: overrides.gradientFactor ?? 1,
@@ -189,6 +194,7 @@ function makeParams(overrides = {}) {
     glucoseFloor: overrides.glucoseFloor ?? 0.1,
     glutamineFloor: overrides.glutamineFloor ?? 0.05,
     prolif: overrides.prolif ?? false,
+    growthModel: overrides.growthModel ?? 'stress_limited',
     dt_h: overrides.dt_h ?? 24,
     lag_h: overrides.lag_h ?? 0,
     maxDays: overrides.maxDays ?? 2,
@@ -364,9 +370,9 @@ function withMockDom(values, fn) {
       custom_medium: { id: 'custom_medium', name: 'Custom medium', glc: 0, gln: 0, pyr: 0, bicarb: 0, buffer: 1, lac: 0 },
     },
     oils: {
-      test_oil: { id: 'test_oil', name: 'Test oil', capacityRatio: 14 },
-      hfe7500: { id: 'hfe7500', name: 'HFE', capacityRatio: 14 },
-      pdms: { id: 'pdms', name: 'PDMS', capacityRatio: 10 },
+      test_oil: { id: 'test_oil', name: 'Test oil', capacityRatio: 14, co2CapacityRatio: 14 },
+      hfe7500: { id: 'hfe7500', name: 'HFE', capacityRatio: 14, co2CapacityRatio: 14 },
+      pdms: { id: 'pdms', name: 'PDMS', capacityRatio: 10, co2CapacityRatio: 10 },
     },
     additives: {
       test_add: { id: 'test_add', name: 'Test additive', default: 1, checked: false, mod: {}, add: {} },
@@ -419,6 +425,11 @@ function baseFormValues(overrides = {}) {
     gasHalf: '150',
     oilHalf: '480',
     dropHalf: '10',
+    oilCO2CapacityOverride: '',
+    co2GasHalf: '',
+    co2OilHalf: '',
+    co2DropHalf: '',
+    co2AqueousGasHalf: '10',
     maxDays: '2',
     logStep: '30',
     initAqO2Pct: '100',
@@ -457,6 +468,7 @@ function baseFormValues(overrides = {}) {
     surfaceAccess: '3',
     bulkO2Mode: 'auto',
     proliferation: 'off',
+    growthModel: 'stress_limited',
     doublingTime: '24',
     lagPhase: '4',
     decimals: '4',
@@ -474,14 +486,16 @@ function baseFormValues(overrides = {}) {
   };
 }
 
-run('artifact render assembles ordered source modules and clears the script placeholder', () => {
-  const { html: renderedHtml, appSourceFiles } = renderArtifact(path.join(__dirname, '..'), manifest);
-  assert(appSourceFiles.includes('src/model/00_data.generated.js'), 'artifact render should include generated runtime data bundle');
-  assert(appSourceFiles.includes('src/model/00_model_and_solver.js'), 'artifact render should include model/solver source module');
-  assert(appSourceFiles.includes('src/model/10_engine_and_calibration.js'), 'artifact render should include extracted engine/calibration source module');
-  assert(appSourceFiles.includes('src/ui/10_ui_and_exports.js'), 'artifact render should include UI/export source module');
-  assert(renderedHtml.includes('function captureRawInputs(){'), 'assembled artifact should include UI/export script content');
-  assert(!renderedHtml.includes('__ARTIFACT_APP_SCRIPT__'), 'assembled artifact should not keep the script placeholder');
+run('canonical HTML contains production code and no competing reconstruction source exists', () => {
+  const root = path.join(__dirname, '..');
+  assert(html.includes('/* BEGIN EMBEDDED DATA */') && html.includes('/* END EMBEDDED DATA */'), 'canonical embedded-data markers missing');
+  assert(html.includes('/* BEGIN MODEL ENGINE */'), 'canonical model marker missing');
+  assert(html.includes('function captureRawInputs(){'), 'canonical HTML should contain UI/export code');
+  for (const rel of ['src/standalone_artifact.template.html', 'src/model/00_data.generated.js', 'src/model/00_model_and_solver.js', 'src/model/10_engine_and_calibration.js', 'src/ui/10_ui_and_exports.js']) {
+    assert(!fs.existsSync(path.join(root, rel)), `competing production source should be removed: ${rel}`);
+  }
+  const buildSource = fs.readFileSync(path.join(root, 'scripts', 'build.js'), 'utf8');
+  assert(!/writeFile|copyFile|rename|createWriteStream/.test(buildSource), 'build script must not contain a file-writing operation');
 });
 
 run('CI workflow keeps the audited syntax, test, build, and clean-tree gates', () => {
@@ -496,6 +510,8 @@ run('CI workflow keeps the audited syntax, test, build, and clean-tree gates', (
     'npm run verify:artifact',
     'npm run verify:manifest',
     'npm run verify:provenance',
+    'npm run verify:html-is-canonical',
+    'timeout-minutes:',
     'git diff --exit-code',
   ];
   for (const fragment of requiredWorkflowFragments) {
@@ -503,13 +519,12 @@ run('CI workflow keeps the audited syntax, test, build, and clean-tree gates', (
   }
 });
 
-run('generated model data bundle matches source JSON catalogs', () => {
+run('canonical embedded data matches supporting JSON catalogs', () => {
   const { DATA: sourceData } = loadSourceData(path.join(__dirname, '..'));
-  assert.deepStrictEqual(Object.keys(sourceData.cellLines).sort(), Object.keys(DATA.cellLines).sort(), 'runtime cell-line keys should match source JSON');
-  assert.deepStrictEqual(Object.keys(sourceData.media).sort(), Object.keys(DATA.media).sort(), 'runtime medium keys should match source JSON');
-  assert.deepStrictEqual(Object.keys(sourceData.oils).sort(), Object.keys(DATA.oils).sort(), 'runtime oil keys should match source JSON');
+  assert.deepStrictEqual(sourceData.cellLines, DATA.cellLines, 'runtime cell lines should match supporting JSON');
+  assert.deepStrictEqual(sourceData.media, DATA.media, 'runtime media should match supporting JSON');
+  assert.deepStrictEqual(sourceData.oils, DATA.oils, 'runtime oils should match supporting JSON');
   assert.deepStrictEqual(sourceData.refs, DATA.refs, 'runtime reference rows should match source JSON');
-  assert.strictEqual(generatedDataBundle, renderModelDataBundle(path.join(__dirname, '..')), 'generated model data bundle should exactly match the source JSON catalogs');
 });
 
 run('parameter provenance matches current source data and covers all cell/media/oil entities', () => {
@@ -528,6 +543,14 @@ run('parameter provenance matches current source data and covers all cell/media/
         assert(record.unit, `${group} ${entity.id} record ${record.parameter} should declare a unit`);
       }
     }
+  }
+  for (const oil of Object.values(parameterProvenance.oils)) {
+    const co2 = oil.records.find((record) => record.parameter === 'co2CapacityRatio');
+    assert(co2, `${oil.id} CO2 capacity provenance record missing`);
+    assert.strictEqual(co2.value, 0, `${oil.id} default CO2 capacity must be disabled`);
+    assert.deepStrictEqual(co2.source, [], `${oil.id} CO2 record must not copy oxygen references`);
+    for (const key of parameterProvenance.oilCO2RequiredFields) assert(Object.prototype.hasOwnProperty.call(co2, key), `${oil.id} CO2 record missing ${key}`);
+    assert.strictEqual(co2.evidenceClassification, 'disabled — no CO2-specific evidence record');
   }
 });
 
@@ -852,26 +875,39 @@ run('only earliest event is retained when multiple thresholds fall in one step',
   assert.strictEqual(r.events.Glutamine, null, 'later glutamine event should not be retained after first stop');
 });
 
-run('zero headspace disables gas transfer sink', () => {
+run('closed zero headspace has no fixed gas boundary and conserves oxygen and carbon to horizon', () => {
   const r = Engine.simulate(
     makeParams({
       targetCells: 0,
       lambda: 0,
       rates: { ocr: 0, gcr: 0, lpr: 0, gln: 0 },
-      initialO2T: 0,
-      initialO2B: 0,
-      initialO2Oil: 0,
+      initialO2T: 160,
+      initialO2B: 140,
+      initialO2Oil: 120,
       initialO2Res: 100,
       headspace_mL: 0,
       headO2Initial: 0,
       headCO2Initial: 0,
-      CO2Initial: 0.1,
-      CO2Boundary: 0.1,
-      maxDays: 0.2,
+      CO2Initial: 1.2,
+      CO2Boundary: 9,
+      pHBoundaryMode: 'closed_headspace_mass_balance',
+      co2AqueousGasHalf: 1,
+      o2Threshold: 5,
+      maxDays: 0.05,
     })
   );
-  approx(r.final.headO2, 0, 1e-9, 'zero-volume headspace should remain empty');
-  approx(r.final.O2Res, 100, 1e-6, 'reservoir O2 should not leak into nonexistent headspace');
+  assert.strictEqual(r.limiter, 'simulation horizon', 'zero-headspace run must not stop at time zero');
+  approx(r.safeMin, r.params.maxDays * 24 * 60, 1e-9, 'zero-headspace run should reach the horizon');
+  approx(r.mass.O2totalFinal, r.mass.O2total0, Math.max(1, r.mass.O2total0) * 1e-10, 'closed zero-headspace oxygen inventory changed');
+  approx(r.mass.CO2trackedFinal, r.mass.CO2tracked0, Math.max(1, r.mass.CO2tracked0) * 1e-10, 'closed zero-headspace carbon inventory changed');
+  assert.strictEqual(r.conductances.fmolPerMinPerUM.gasRes, 0, 'reservoir/headspace O2 conductance must be exactly zero');
+  assert.strictEqual(r.conductances.fmolPerMinPerUM.gasDirect, 0, 'emulsion/headspace O2 conductance must be exactly zero');
+  assert.strictEqual(r.conductances.fmolPerMinPerUM.co2GasRes, 0, 'reservoir/headspace CO2 conductance must be exactly zero');
+  assert.strictEqual(r.conductances.fmolPerMinPerUM.co2GasDirect, 0, 'emulsion/headspace CO2 conductance must be exactly zero');
+  assert.strictEqual(r.initialFlux.boundaryNet, 0, 'initial gas O2 flux must be exactly zero');
+  assert(Math.abs(r.mass.o2Residual) <= Math.max(1, r.mass.O2total0) * 1e-10, `scale-aware O2 residual too large: ${r.mass.o2Residual}`);
+  assert(Math.abs(r.mass.co2Residual) <= Math.max(1, r.mass.CO2tracked0) * 1e-10, `scale-aware carbon residual too large: ${r.mass.co2Residual}`);
+  console.log(`  PROBE zero-headspace horizon=${r.safeMin}min gasO2=${r.conductances.fmolPerMinPerUM.gasRes}/${r.conductances.fmolPerMinPerUM.gasDirect} gasCO2=${r.conductances.fmolPerMinPerUM.co2GasRes}/${r.conductances.fmolPerMinPerUM.co2GasDirect} O2residual=${r.mass.o2Residual} CO2residual=${r.mass.co2Residual}`);
 });
 
 run('fixed CO2 reservoir is not limited by finite headspace moles', () => {
@@ -1018,10 +1054,8 @@ run('public release identity is consistent', () => {
   assert(!html.includes('v17-audit-20260715'), 'old release identity still present');
 });
 
-run('artifact matches the rendered source template and manifest metadata', () => {
-  const root = path.join(__dirname, '..');
-  const { html: renderedHtml, manifestSha256 } = renderArtifact(root, manifest);
-  assert.strictEqual(html, renderedHtml, 'committed artifact should exactly match the rendered source template');
+run('canonical artifact carries manifest metadata without reconstruction', () => {
+  const manifestSha256 = stableArtifactManifestHash(manifest);
   assert(html.includes(`content="${manifestSha256}"`), 'artifact should include the rendered stable manifest hash');
 });
 
@@ -1101,10 +1135,20 @@ run('single-parameter calibration recovers droplet half-time from synthetic targ
     }
     return { time_h, observed: predicted };
   });
+  const wallStart = Date.now();
   const fit = runCalibrationFit({ ...trueParams, dropHalf: 4 }, { observable: 'O2T', fitMode: 'dropHalf', series });
+  const observedWallMs = Date.now() - wallStart;
   assert(Math.abs(fit.bestFit.dropHalf - 12) < 3, `calibration should recover droplet half-time near 12 min, got ${fit.bestFit.dropHalf}`);
   assert(fit.intervals.dropHalf.low <= fit.bestFit.dropHalf && fit.intervals.dropHalf.high >= fit.bestFit.dropHalf, 'profile range should contain the best fit');
   assert.strictEqual(fit.predictionConditionsMatchCurrentSetup, true, 'calibration should report that prediction conditions match the current setup');
+  assert.strictEqual(fit.telemetry.modelEvaluations, 27, 'calibration model-evaluation telemetry mismatch');
+  assert(fit.telemetry.acceptedSteps < 30000, `ordinary five-hour calibration exceeded accepted-step budget: ${fit.telemetry.acceptedSteps}`);
+  assert.strictEqual(fit.telemetry.rejectedSteps, 0, 'implicit transport solver should not report rejected steps');
+  assert(fit.telemetry.minimumTimestepMin > 0 && fit.telemetry.medianTimestepMin > 0, 'calibration timestep telemetry missing');
+  assert(fit.telemetry.endpointBehavior['simulation horizon'] === 27, 'calibration should evaluate all observations through the horizon');
+  assert.strictEqual(fit.telemetry.workloadDifference, fit.telemetry.actualSteps - fit.telemetry.estimatedSteps, 'estimated/actual workload difference mismatch');
+  assert(observedWallMs < fit.telemetry.performanceBudgetMs, `calibration exceeded ${fit.telemetry.performanceBudgetMs} ms budget: ${observedWallMs} ms`);
+  console.log(`  PROBE calibration evaluations=${fit.telemetry.modelEvaluations} accepted=${fit.telemetry.acceptedSteps} rejected=${fit.telemetry.rejectedSteps} estimated=${fit.telemetry.estimatedSteps} minDt=${fit.telemetry.minimumTimestepMin} medianDt=${fit.telemetry.medianTimestepMin} wall=${observedWallMs}ms fit=${fit.bestFit.dropHalf}`);
 });
 
 run('carbonate alkalinity solver matches an independent equilibrium root', () => {
@@ -1148,6 +1192,162 @@ run('carbonate alkalinity mode conserves tracked carbon in finite closed headspa
   );
   assert.strictEqual(r.mass.closedCarbonBalance, true, 'carbonate closed finite-headspace mode should report closed tracked-carbon balance');
   assert(r.mass.co2ResidualPct < 1e-6, `carbonate tracked-carbon residual should stay near zero, got ${r.mass.co2ResidualPct}`);
+});
+
+run('carbonate oil-phase CO2 collapses to aqueous-only behavior when oil CO2 capacity is zero', () => {
+  const base = {
+    pHModel: 'carbonate_alkalinity',
+    pHBoundaryMode: 'closed_headspace_mass_balance',
+    targetCells: 8,
+    lambda: 0,
+    rates: { ocr: 1.5, gcr: 0, lpr: 0.4, gln: 0 },
+    gasHalf: 20,
+    oilHalf: 10,
+    dropHalf: 5,
+    maxDays: 0.02,
+    atmMode: 'closed',
+    headspace_mL: 0.25,
+    initialO2T: 200,
+    initialO2B: 200,
+    initialO2Oil: 200,
+    initialO2Res: 200,
+    o2Threshold: 0,
+  };
+  const noOilCapacity = Engine.simulate(makeParams({ ...base, oil: { capacityRatio: 14, co2CapacityRatio: 0, co2CapacityEnabled: false } }));
+  const noOilVolume = Engine.simulate(makeParams({ ...base, oil: { capacityRatio: 14, co2CapacityRatio: 14, co2CapacityEnabled: true }, co2GasHalf: 20, co2OilHalf: 10, co2DropHalf: 5, VoilEmul_uL: 0, residualOil_uL: 0 }));
+  approx(noOilCapacity.mass.co2ResidualPct, noOilVolume.mass.co2ResidualPct, 1e-9, 'zero oil CO2 capacity should collapse to zero oil-volume carbon behavior');
+  approx(noOilCapacity.final.pH, noOilVolume.final.pH, 0.02, 'zero oil CO2 capacity should stay close to zero oil-volume pH behavior');
+  approx(noOilCapacity.final.mCO2Oil || 0, 0, 1e-12, 'zero oil CO2 capacity should leave no oil-phase tracked carbon');
+});
+
+run('higher oil CO2 capacity increases retained oil-phase carbon in carbonate mode', () => {
+  const common = {
+    pHModel: 'carbonate_alkalinity',
+    pHBoundaryMode: 'closed_headspace_mass_balance',
+    targetCells: 20,
+    lambda: 0,
+    rates: { ocr: 0, gcr: 0, lpr: 25, gln: 0 },
+    gasHalf: 20,
+    oilHalf: 10,
+    dropHalf: 5,
+    maxDays: 0.03,
+    atmMode: 'closed',
+    headspace_mL: 0.25,
+    initialO2T: 200,
+    initialO2B: 200,
+    initialO2Oil: 200,
+    initialO2Res: 200,
+    o2Threshold: 0,
+  };
+  const planning = { co2CapacityEnabled: true, co2EvidenceClassification: 'Unvalidated planning assumption — user supplied' };
+  const transport = { co2GasHalf: 20, co2OilHalf: 10, co2DropHalf: 5 };
+  const low = Engine.simulate(makeParams({ ...common, ...transport, oil: { capacityRatio: 14, co2CapacityRatio: 2, ...planning } }));
+  const high = Engine.simulate(makeParams({ ...common, ...transport, oil: { capacityRatio: 14, co2CapacityRatio: 40, ...planning } }));
+  assert(high.final.mCO2Oil > low.final.mCO2Oil, `higher oil CO2 capacity should retain more oil-phase CO2, got low=${low.final.mCO2Oil}, high=${high.final.mCO2Oil}`);
+});
+
+run('oil CO2 defaults are disabled and transport never derives from oxygen half-times', () => {
+  for (const oil of Object.values(DATA.oils)) {
+    assert.strictEqual(oil.co2CapacityRatio, 0, `${oil.id} default CO2 capacity must be zero`);
+    assert.strictEqual(oil.co2CapacityEnabled, false, `${oil.id} default CO2 capacity must be disabled`);
+    assert.strictEqual(oil.co2Provenance, null, `${oil.id} should not claim CO2 provenance`);
+  }
+  assert(html.includes('Unvalidated planning assumption — user supplied'), 'user override label missing');
+  assert(!html.includes('dropTargetHalf/2.2') && !html.includes('dropBulkHalf/2.2'), 'CO2 transport must not use the undocumented O2 / 2.2 factor');
+});
+
+run('true Poisson nutrient capacities persist in auto, shared, and grouped O2 modes', () => {
+  const lambda = 0.4;
+  const occupancy = buildOccupancyModel(lambda, 500, 1);
+  for (const bulkO2Mode of ['auto', 'shared_mean_field', 'grouped_transport_limited']) {
+    const r = Engine.simulate(makeParams({
+      bulkO2Mode,
+      lambda,
+      N: 500,
+      occupancy,
+      Vaq_uL: 0.5,
+      targetCells: 1,
+      rates: { ocr: 0.2, gcr: 0.8, lpr: 1.2, gln: 0.3 },
+      gasHalf: 1e9,
+      oilHalf: 1e9,
+      dropHalf: 1e9,
+      maxDays: 0.05,
+      atmMode: 'closed',
+      headspace_mL: 0,
+      o2Threshold: 0,
+    }));
+    approx(r.capacities.capEmpty + r.capacities.capSingle + r.capacities.capMulti, r.capacities.capBulk, Math.max(1, r.capacities.capBulk) * 1e-12, `${bulkO2Mode} chemical capacities must reconcile`);
+    assert(r.capacities.capEmpty > 0 && r.capacities.capSingle > 0 && r.capacities.capMulti > 0, `${bulkO2Mode} must retain all occupancy groups`);
+    approx(r.final.GlcEmpty, r.params.sub.glc, 1e-12, 'empty-droplet glucose should remain unchanged');
+    approx(r.final.GlnEmpty, r.params.sub.gln, 1e-12, 'empty-droplet glutamine should remain unchanged');
+    approx(r.final.LacEmpty, r.params.sub.lac, 1e-12, 'empty droplets must not produce lactate');
+    assert(r.final.GlcMulti < r.final.GlcSingle, `multi-cell droplets should deplete glucose faster in ${bulkO2Mode}`);
+    const expectedBulkGlc = ((r.final.GlcEmpty * r.capacities.capEmpty) + (r.final.GlcSingle * r.capacities.capSingle) + (r.final.GlcMulti * r.capacities.capMulti)) / Math.max(1e-9, r.capacities.capBulk);
+    approx(r.final.GlcB, expectedBulkGlc, 1e-12, 'bulk glucose summary should equal the weighted group mean');
+    const exported = buildOccupancyGroupExport(r);
+    approx(exported.reconciliation.capacity_nL, 0, 1e-12, 'export capacity reconciliation failed');
+    approx(exported.reconciliation.population, 0, 1e-9, 'export population reconciliation failed');
+    for (const group of ['empty', 'single', 'multi']) assert(Number.isFinite(exported.groups[group].capacity_nL), `export ${group} capacity missing`);
+  }
+});
+
+run('stress-limited growth matches legacy logistic when local conditions stay near initial values', () => {
+  const common = {
+    prolif: true,
+    dt_h: 12,
+    lag_h: 0,
+    targetCells: 1,
+    lambda: 0,
+    rates: { ocr: 0, gcr: 0, lpr: 0, gln: 0 },
+    gasHalf: 1e9,
+    oilHalf: 1e9,
+    dropHalf: 1e9,
+    maxDays: 0.2,
+    atmMode: 'closed',
+    headspace_mL: 0,
+    o2Threshold: 0,
+  };
+  const stress = Engine.simulate(makeParams({ ...common, growthModel: 'stress_limited' }));
+  const legacy = Engine.simulate(makeParams({ ...common, growthModel: 'legacy_logistic' }));
+  approx(stress.final.nT, legacy.final.nT, legacy.final.nT * 1e-6 + 1e-9, 'stress-limited growth should match legacy logistic when no local stress develops');
+});
+
+run('stateful stress growth materially lowers population and integrated demand monotonically', () => {
+  const lambda = 4;
+  const occupancy = buildOccupancyModel(lambda, 800, 1);
+  const common = {
+    prolif: true,
+    dt_h: 4,
+    lag_h: 0,
+    bulkO2Mode: 'grouped_transport_limited',
+    lambda,
+    N: 800,
+    occupancy,
+    Vaq_uL: 0.8,
+    targetCells: 0,
+    rates: { ocr: 0, gcr: 0.5, lpr: 0.5, gln: 0.2 },
+    sub: { glc: 0.5, gln: 0.3, lac: 0, bicarb: 0 },
+    gasHalf: 1e9,
+    oilHalf: 1e9,
+    dropHalf: 1e9,
+    maxDays: 0.5,
+    atmMode: 'closed',
+    headspace_mL: 0,
+    o2Threshold: -1,
+    pHFloor: 0,
+    pHCeiling: 14,
+  };
+  const stress = Engine.simulate(makeParams({ ...common, growthModel: 'stress_limited' }));
+  const legacy = Engine.simulate(makeParams({ ...common, growthModel: 'legacy_logistic' }));
+  assert(stress.final.nMulti < legacy.final.nMulti * 0.8, `stress effect must be material, got stress=${stress.final.nMulti}, legacy=${legacy.final.nMulti}`);
+  assert(stress.mass.glucoseConsumed < legacy.mass.glucoseConsumed * 0.9, `stress should reduce integrated demand, got stress=${stress.mass.glucoseConsumed}, legacy=${legacy.mass.glucoseConsumed}`);
+  const levels = [2, 0.8, 0.3].map((glc) => Engine.simulate(makeParams({ ...common, sub: { ...common.sub, glc }, growthModel: 'stress_limited' })));
+  assert(levels[0].final.nMulti >= levels[1].final.nMulti && levels[1].final.nMulti >= levels[2].final.nMulti, 'population must decrease monotonically with worsening glucose stress');
+  for (const result of [stress, legacy, ...levels]) for (const value of [result.final.nT, result.final.nSingle, result.final.nMulti, result.final.nBulk]) assert(Number.isFinite(value) && value >= 0, `population must stay finite and nonnegative, got ${value}`);
+  const fine = Engine.simulate(makeParams({ ...common, growthModel: 'stress_limited', maxStepMin: 0.25 }));
+  const relative = Math.abs(fine.final.nMulti - stress.final.nMulti) / Math.max(1, fine.final.nMulti);
+  assert(relative < 0.02, `stateful growth should converge under timestep refinement, relative difference=${relative}`);
+  console.log(`  PROBE growth stressPopulation=${stress.final.nMulti} legacyPopulation=${legacy.final.nMulti} stressGlucose=${stress.mass.glucoseConsumed} legacyGlucose=${legacy.mass.glucoseConsumed} refinement=${relative}`);
 });
 
 run('carbonate alkalinity buffer capacity reduces acidification monotonically', () => {
@@ -1510,7 +1710,7 @@ run('grouped bulk O2 still shares the oil reservoir at finite exchange', () => {
   const isolated = Engine.simulate(makeParams({ ...common, dropHalf: 1e9 }));
   const finite = Engine.simulate(makeParams({ ...common, dropHalf: 5 }));
   assert(finite.final.O2Empty < isolated.final.O2Empty - 1, `finite oil-mediated exchange should let occupied droplets draw oxygen from empty droplets through shared oil; isolated empty=${isolated.final.O2Empty}, finite empty=${finite.final.O2Empty}`);
-  assert(finite.final.O2BulkOccupied > isolated.final.O2BulkOccupied + 1e-6, `finite oil-mediated exchange should relay some oxygen back into occupied droplets; isolated occupied=${isolated.final.O2BulkOccupied}, finite occupied=${finite.final.O2BulkOccupied}`);
+  assert(finite.mass.o2Consumed > isolated.mass.o2Consumed + 1, `finite oil-mediated exchange should relay additional oxygen into occupied droplets for consumption; isolated=${isolated.mass.o2Consumed}, finite=${finite.mass.o2Consumed}`);
 });
 
 run('preset synchronization resets PTFE kinetics when returning to a static tube', () => {
@@ -1620,6 +1820,12 @@ run('JSON export payload includes reproducibility metadata and conductances', ()
     assert(Array.isArray(payload.warnings), 'export warnings missing');
     assert(Array.isArray(payload.rateScenarios) && payload.rateScenarios.length === 3, 'export rate scenarios missing');
     assert.strictEqual(typeof payload.trackedCarbonResidualApplicable, 'boolean', 'tracked-carbon applicability missing');
+    assert(payload.occupancyGroups && payload.occupancyGroups.groups.empty && payload.occupancyGroups.groups.single && payload.occupancyGroups.groups.multi, 'occupancy group export missing');
+    assert(Number.isFinite(payload.occupancyGroups.groups.single.population), 'single-group population export missing');
+    approx(payload.occupancyGroups.reconciliation.capacity_nL, 0, 1e-9, 'exported capacity reconciliation failed');
+    assert(payload.parameterProvenance.oil.co2EvidenceClassification, 'oil CO2 evidence classification missing');
+    const csv = toCSV(r);
+    for (const field of ['empty_capacity_nL','single_population','multi_glucose_mM','bulk_lactate_amount_weighted_mM','dic_reconciliation_mM_nL']) assert(csv.split('\n')[0].includes(field), `CSV occupancy field missing: ${field}`);
   });
 });
 

@@ -1,10 +1,11 @@
 const fs = require('fs');
 const path = require('path');
-const { loadManifest, renderArtifact } = require('./release_utils');
+const vm = require('vm');
+const { loadManifest, stableArtifactManifestHash } = require('./release_utils');
 
 const root = path.join(__dirname, '..');
 const manifest = loadManifest(root);
-const { html: expectedHtml, manifestSha256, templatePath, appSourceFiles } = renderArtifact(root, manifest);
+const manifestSha256 = stableArtifactManifestHash(manifest);
 const files = {
   html: fs.readFileSync(path.join(root, 'metabolic_depletion_forecaster.html'), 'utf8'),
   readme: fs.readFileSync(path.join(root, 'README.md'), 'utf8'),
@@ -15,8 +16,11 @@ const files = {
 
 const release = manifest.release;
 const checks = [
-  [files.html === expectedHtml, `artifact content does not match rendered source template ${path.relative(root, templatePath)}`],
-  [!files.html.includes('__ARTIFACT_APP_SCRIPT__'), 'artifact still contains unresolved app-script placeholder'],
+  [files.html.includes('/* BEGIN EMBEDDED DATA */') && files.html.includes('/* END EMBEDDED DATA */'), 'canonical embedded-data markers missing'],
+  [files.html.includes('/* BEGIN MODEL ENGINE */'), 'canonical model-engine marker missing'],
+  [!/<script\b[^>]*\bsrc\s*=/i.test(files.html), 'external script reference found'],
+  [!/<link\b[^>]*\bhref\s*=\s*["']https?:/i.test(files.html), 'external stylesheet reference found'],
+  [!/(?:fetch\s*\(|XMLHttpRequest|WebSocket\s*\(|EventSource\s*\()/i.test(files.html), 'external runtime request API found'],
   [files.html.includes(`release: ${release}`), 'artifact comment release mismatch'],
   [files.html.includes(`data-release="${release}"`), 'body release mismatch'],
   [files.html.includes(`content="${release}"`), 'meta release mismatch'],
@@ -39,4 +43,8 @@ for (const [ok, message] of checks) {
   if (!ok) throw new Error(message);
 }
 
-console.log(`Artifact verification passed for ${release} from ${path.relative(root, templatePath)} + ${appSourceFiles.join(', ')}.`);
+const scriptMatch = files.html.match(/<script>\r?\n([\s\S]*?)\r?\n<\/script>/);
+if (!scriptMatch) throw new Error('Canonical inline script missing.');
+new vm.Script(scriptMatch[1], { filename: 'metabolic_depletion_forecaster.html<script>' });
+
+console.log(`Canonical artifact verification passed for ${release}; no reconstruction source was used.`);

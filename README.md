@@ -14,12 +14,14 @@ Current release status:
 - Partial-step endpoint acceptance reruns only the accepted fraction, so mass counters and stop times stay aligned.
 - Zero-headspace closed runs disable headspace gas exchange instead of leaking into a nonexistent gas compartment.
 - Closed tracked-CO₂ residuals are only reported for finite closed-headspace carbon-balance mode, not for external CO₂ reservoir modes.
-- CO₂ diagnostics are explicitly labeled as tracked aqueous + headspace CO₂ residuals; oil-phase CO₂ is not yet tracked.
+- Oil-phase CO₂ is disabled by default for every oil because no embedded record has CO₂-specific capacity evidence. It can be enabled only with capacity and transport inputs labeled `Unvalidated planning assumption — user supplied`.
 - Exchange half-times now support two modes: geometry-scaled reference values or directly applied measured-effective values.
 - Rate inputs now support two temperature interpretations: referenced to 37 °C with Q10 scaling, or already measured at the selected temperature with no Q10 scaling.
+- Bulk nutrients are now resolved by occupancy class, so empty, single-cell, and multi-cell bulk droplets can diverge in glucose, glutamine, and lactate history even while sharing the same oil reservoir for O₂.
+- Proliferation now evolves accepted-step population state and supports a stress-limited mode driven by local O₂, glucose, glutamine, lactate, and pH. The legacy mode uses the same stateful step with environmental stress fixed to one.
 - Deterministic low-demand / nominal / high-demand scenario runs are available from stored cell-line rate bounds.
 - Calibration now accepts pasted O₂ time series, fits selected transport half-times for the current setup, and reports residuals, profile-style ranges, and identifiability warnings.
-- JSON exports now carry release metadata, audited source commit, audit-manifest SHA-256, raw input snapshots, effective parameters, parameter provenance, actual conductances, solver tolerances, solver diagnostics, warnings, and deterministic scenario summaries.
+- JSON exports now carry release metadata, audited source commit, audit-manifest SHA-256, raw input snapshots, effective parameters, parameter provenance, actual conductances, solver tolerances, solver diagnostics, grouped bulk nutrient summaries, growth-model metadata, warnings, and deterministic scenario summaries.
 - Manual calculations and sweeps now run in a background Web Worker when supported, with progress text and a cancel button instead of freezing the UI thread.
 - pH now defaults to a carbonate/alkalinity mode that tracks aqueous DIC, headspace CO₂, bicarbonate/carbonate speciation, water dissociation, lactate acid equivalents, and linear non-bicarbonate buffer alkalinity. The legacy heuristic bicarbonate/CO₂ mode remains available for backward comparison.
 
@@ -27,9 +29,9 @@ Current release status:
 
 Open `metabolic_depletion_forecaster.html` in a browser.
 
-The committed standalone artifact is generated deterministically from `src/standalone_artifact.template.html`, the ordered `src/model/*.js` and `src/ui/*.js` source modules, and the current audit-manifest metadata.
-The current source layout keeps runtime data in `src/data/`, model constants/bootstrap in `src/model/00_model_and_solver.js`, extracted pure simulation and calibration logic in `src/model/10_engine_and_calibration.js`, and DOM/export logic in `src/ui/10_ui_and_exports.js`.
-Scientific runtime defaults for cell lines, media, oils, and reference rows now live in `src/data/*.json`; the offline runtime bundle in `src/model/00_data.generated.js` is generated deterministically from those source catalogs.
+`metabolic_depletion_forecaster.html` is the product, canonical source implementation, and release artifact. No support command generates, reconstructs, or overwrites it. `npm run build` hashes and parses the HTML, extracts derived JavaScript only to ignored `.tmp/`, runs validators, and fails if the HTML hash changes.
+
+Supporting catalogs in `src/data/*.json` and machine-readable provenance in `data/parameter_provenance.json` exist for inspection and verification. Their values are checked against the embedded canonical runtime data; extraction and verification direction is always canonical HTML → temporary/supporting views, never the reverse.
 
 Run regression checks with:
 
@@ -44,9 +46,10 @@ npm run verify:data
 npm run verify:artifact
 npm run verify:manifest
 npm run verify:provenance
+npm run verify:html-is-canonical
 ```
 
-CI runs the same gate set on every push and pull request, and also fails if rebuilding the standalone artifact leaves tracked files dirty.
+CI runs the same gate set with an explicit three-minute Node regression timeout and Chromium/Firefox/WebKit coverage where supported. It also fails if support commands alter the canonical HTML or leave tracked files dirty.
 
 Scientific source metadata is now exported to `data/parameter_provenance.json`, generated deterministically from the current source data and verified in CI.
 
@@ -63,7 +66,7 @@ Supporting audit docs:
 - Setup: cell line, medium, droplet volume, target occupancy, additives.
 - Emulsion & Gas: Poisson λ, total emulsion volume, aqueous fraction, reservoir oil volume, oil type, vessel format, and exchange kinetics.
 - Environment: gas phase, finite or replenished boundary, temperature, pH limits, and hypoxia threshold.
-- Metabolism: growth, Warburg override, rate overrides, Pasteur effect, and output settings.
+- Metabolism: growth enable/disable, stress-limited vs legacy logistic growth mode, Warburg override, rate overrides, Pasteur effect, and output settings.
 - Diagnostics: gas capacity, exchange half-times, timeline table, transport calibration, exports, and sensitivity sweep.
 
 ## Vessel formats
