@@ -6,8 +6,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Metabolic Depletion Forecaster v18</title>
 <meta name="artifact-release" content="v18-transport-20260715" />
-<meta name="artifact-commit" content="b41aa22dacb9cc41a540ca9fc59bce7d74eb0afb" />
-<meta name="artifact-manifest-sha256" content="8F674F2B01A8D5C32D44E9A5DF2EF93AC59A29B68B676F6D470A10129835A21A" />
+<meta name="artifact-commit" content="4ed14940f7506042e51af0c2f677958e8c5a58a8" />
+<meta name="artifact-manifest-sha256" content="61BD856550D4AE1E1704438B5D2D160B0833BF3AABF235F8AD08202C8E91A805" />
 <meta name="description" content="Forecast oxygen, nutrient, and pH limits in droplet emulsions and small-volume cultures." />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%232563eb'/%3E%3Cstop offset='1' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='%2308111f'/%3E%3Ccircle cx='24' cy='32' r='12' fill='url(%23g)'/%3E%3Ccircle cx='42' cy='25' r='7' fill='%238b5cf6'/%3E%3Ccircle cx='42' cy='41' r='5' fill='%2306b6d4'/%3E%3Cpath d='M15 50c10-8 27-8 38 0' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' opacity='.9'/%3E%3C/svg%3E" />
 <style>
@@ -585,145 +585,6 @@ function fmtVol(uL,d=3){if(!Number.isFinite(uL))return '—'; if(Math.abs(uL)>=1
 function emulsionVolume_uL(){return Math.max(0,(Number($('#totalEmulsion')?.value)||0))*1000;}
 function reservoirOilVolume_uL(){return Math.max(0,(Number($('#residualOil')?.value)||0))*1000;}
 function phaseVolumes(){const Vemul_uL=Math.max(.001,emulsionVolume_uL()); const aqueousFrac=clamp((Number($('#aqueousFraction')?.value)||0)/100,.001,.95); const Vaq_uL=Vemul_uL*aqueousFrac; const VoilEmul_uL=Math.max(0,Vemul_uL-Vaq_uL); const residualOil_uL=reservoirOilVolume_uL(); const totalOil_uL=VoilEmul_uL+residualOil_uL; const liquid_uL=Vemul_uL+residualOil_uL; return {Vemul_uL,aqueousFrac,Vaq_uL,VoilEmul_uL,residualOil_uL,totalOil_uL,liquid_uL};}
-function captureRawInputs(){
-  const raw={};
-  $$('input,select,textarea').forEach(el=>{
-    if(!el||!el.id)return;
-    raw[el.id]=el.type==='checkbox'?!!el.checked:String(el.value??'');
-  });
-  return raw;
-}
-function activeAdditiveSelections(){
-  return Object.values(DATA.additives||{}).filter(a=>$(`#add_${a.id}`)?.checked).map(a=>({id:a.id,name:a.name,quantity:Number($(`#qty_${a.id}`)?.value)||0}));
-}
-function buildParameterProvenance(p){
-  return {
-    cellLine:{id:p.cell?.id||null,name:p.cell?.name||null,source:p.cell?.id==='custom'?'user custom rates':'embedded cell-rate database',rateTier:p.cell?.rateTier||p.cell?.evidenceTier||null,rateBasis:p.cell?.rateBasis||p.cell?.estimateBasis||null},
-    medium:{id:p.med?.id||null,name:p.med?.name||null,source:p.med?.id==='custom_medium'?'user custom medium':'embedded medium database'},
-    oil:{id:p.oil?.id||null,name:p.oil?.name||null,source:'embedded oil/material database',capacityRatio:p.oil?.capacityRatio??null},
-    gasBoundary:{preset:$('#headspaceGas')?.value||null,name:p.gas?.name||null,source:p.gas?.custom?'user-entered gas mixture':'preset gas mixture',atmMode:p.atmMode},
-    vessel:{preset:$('#vesselPreset')?.value||null,environmentPreset:$('#vesselPresetEnv')?.value||null,name:p.vessel?.name||null,storageMode:p.storageMode,geometryMode:p.geometryMode},
-    rates:{temperatureMode:p.rateTemperatureMode,halfTimeMode:p.halfTimeMode,customCell:!!p.rateScenarioSource?.customCell,overridesActive:!!p.rateScenarioSource?.overridesActive,q10Factor:p.q10Factor,activeAdditives:activeAdditiveSelections()},
-    oxygen:{bulkO2ModeRequested:p.bulkO2Mode,thresholdMode:p.o2ThresholdMode,thresholdValue:p.o2ThresholdValue,initialAqPct:p.initAqO2Pct,initialOilPct:p.initOilO2Pct,initialReservoirPct:p.initReservoirO2Pct},
-    carbon:{pHBoundaryMode:p.pHBoundaryMode,pHModel:p.pHModel,trackedCarbonInventory:p.pHModel==='carbonate_alkalinity'?'target aqueous + grouped bulk aqueous DIC + optional finite headspace CO₂':'target aqueous + grouped bulk aqueous dissolved CO₂ + optional finite headspace CO₂'},
-  };
-}
-function artifactMetadata(){
-  return {
-    release:document.querySelector('meta[name="artifact-release"]')?.content||document.body.dataset.release||null,
-    commit:document.querySelector('meta[name="artifact-commit"]')?.content||null,
-    manifestSha256:document.querySelector('meta[name="artifact-manifest-sha256"]')?.content||null
-  };
-}
-function workerModelSource(){
-  const start=ARTIFACT_SCRIPT_TEXT.indexOf(WORKER_MODEL_START);
-  const end=ARTIFACT_SCRIPT_TEXT.indexOf(WORKER_MODEL_END);
-  if(start<0||end<0||end<=start)return null;
-  return ARTIFACT_SCRIPT_TEXT.slice(start,end);
-}
-function workerScriptSource(){
-  const model=workerModelSource();
-  if(!model)return null;
-  return `const window=self; const document={querySelector:()=>null,querySelectorAll:()=>[],getElementById:()=>null,body:{dataset:{}}}; const navigator={}; ${model}
-self.onmessage=(event)=>{
-  const {jobId,kind,payload}=event.data||{};
-  const progress=(progress)=>self.postMessage({type:'progress',jobId,kind,progress});
-  try{
-    if(kind==='simulate'){
-      const result=Engine.simulate(payload.params,{progress});
-      result.rateScenarios=buildRateScenarioResults(payload.params);
-      self.postMessage({type:'result',jobId,kind,result});
-      return;
-    }
-    if(kind==='scenarios'){
-      const rateScenarios=buildRateScenarioResults(payload.params);
-      self.postMessage({type:'result',jobId,kind,result:{params:payload.params,rateScenarios}});
-      return;
-    }
-    if(kind==='sweep'){
-      const vols=[.07,.17,.3,.7,1,2,5,7], lambdas=[.05,.1,.3,.8,1.5];
-      const rows=[]; const total=vols.length*lambdas.length; let done=0;
-      for(const v of vols){
-        for(const lam of lambdas){
-          const p={...payload.params,volume_nL:v,lambda:lam};
-          const N=Math.max(1,p.Vaq_uL*1000/v), p0=Math.exp(-lam), p1=lam*p0, occupancy=buildOccupancyModel(lam,N,p.targetCells);
-          Object.assign(p,{N,p0,p1,totalCells:occupancy.expectedTotalCells,bulkInitialCells:occupancy.expectedBulkCells,occupancy,occupiedDroplets:occupancy.occupiedDroplets,occupiedFraction:occupancy.occupiedFraction,empty:p0*N,single:p1*N,multi:Math.max(0,N*(1-p0-p1)),targetProbability:poissonPMF(p.targetCells,lam),chartO2Reference:Math.max(1,p.airO2Eq,p.O2eq,p.initialO2T,p.initialO2Oil,p.initialO2Res,p.o2Threshold)});
-          const r=Engine.simulate(p);
-          rows.push({volume_nL:v,lambda:lam,targetCells:p.targetCells,targetProbability:p.targetProbability,safeMin:r.safeMin,limiter:r.limiter,maxDays:p.maxDays});
-          done+=1;
-          progress({phase:'sweep',done,total,fraction:done/Math.max(1,total)});
-        }
-      }
-      self.postMessage({type:'result',jobId,kind,result:{rows}});
-      return;
-    }
-    if(kind==='calibration'){
-      const result=runCalibrationFit(payload.params,payload.config,progress);
-      self.postMessage({type:'result',jobId,kind,result});
-      return;
-    }
-    throw new Error('Unknown worker job: '+kind);
-  }catch(error){
-    self.postMessage({type:'error',jobId,kind,error:String(error&&error.stack?error.stack:error)});
-  }
-};`;
-}
-function workerSupported(){return typeof Worker==='function'&&!!workerModelSource();}
-function cleanupWorkerJob(){if(!activeWorkerJob)return; try{activeWorkerJob.worker.terminate();}catch(e){} try{URL.revokeObjectURL(activeWorkerJob.url);}catch(e){} activeWorkerJob=null;}
-function setWorkerRunState(running,progressText=''){const cancel=$('#cancelBtn'),calc=$('#calculateBtn'),sweep=$('#runSweepBtn'),scenarios=$('#runScenariosBtn'),calibration=$('#runCalibrationBtn'); if(cancel)cancel.disabled=!running; if(calc)calc.disabled=running; if(sweep)sweep.disabled=running; if(scenarios)scenarios.disabled=running; if(calibration)calibration.disabled=running; $('#progressNote').textContent=progressText||'';}
-function cancelActiveWorkerJob(message='Background run cancelled.'){if(!activeWorkerJob)return; cleanupWorkerJob(); setWorkerRunState(false,''); $('#lastRun').textContent=message;}
-function startWorkerJob(kind,payload,{startText,onResult,onProgress,onError}={}){
-  if(!workerSupported())return false;
-  cancelActiveWorkerJob('');
-  const source=workerScriptSource();
-  if(!source)return false;
-  const jobId=`${kind}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-  const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
-  const worker=new Worker(url);
-  activeWorkerJob={jobId,kind,worker,url};
-  setWorkerRunState(true,'');
-  $('#lastRun').textContent=startText||'Running in background…';
-  worker.onmessage=(event)=>{
-    if(!activeWorkerJob||activeWorkerJob.jobId!==jobId)return;
-    const msg=event.data||{};
-    if(msg.type==='progress'){if(onProgress)onProgress(msg.progress||{}); return;}
-    if(msg.type==='result'){cleanupWorkerJob(); setWorkerRunState(false,''); if(onResult)onResult(msg.result); return;}
-    if(msg.type==='error'){cleanupWorkerJob(); setWorkerRunState(false,''); if(onError)onError(msg.error||'Worker error');}
-  };
-  worker.postMessage({jobId,kind,payload});
-  return true;
-}
-function formatWorkerProgress(kind,progress){
-  if(kind==='simulate')return `Worker progress ${fmt((progress.fraction||0)*100,0)}% · ${fmt(progress.acceptedSteps||0,0)} accepted steps`;
-  if(kind==='sweep')return `Sweep progress ${fmt((progress.fraction||0)*100,0)}% · ${fmt(progress.done||0,0)}/${fmt(progress.total||0,0)} cases`;
-  if(kind==='calibration')return `Calibration progress ${fmt((progress.fraction||0)*100,0)}% · ${fmt(progress.done||0,0)}/${fmt(progress.total||0,0)} fits`;
-  return 'Worker running…';
-}
-function liquidVolume_uL(){return phaseVolumes().liquid_uL;}
-function autoHeadspace_mL(spec= vesselSpec()){if(spec.id==='custom'||!Number.isFinite(spec.capacity_uL))return Math.max(0,Number($('#headspaceVolume')?.value)||0); return (spec.capacity_uL-liquidVolume_uL())/1000;}
-function confidenceForCell(cell){
-  if(!cell)return {type:'warn',title:'Rate confidence unavailable',detail:'Select a cell line before interpreting the useful-window forecast.'};
-  const tierRaw=String(cell.rateTier||cell.evidenceTier||(cell.id==='custom'?'CUSTOM':'UNSPECIFIED')).toUpperCase();
-  const bounds=[];
-  if(Number.isFinite(cell.ocrLow)&&Number.isFinite(cell.ocrHigh))bounds.push(`OCR ${fmt(cell.ocrLow,2)}–${fmt(cell.ocrHigh,2)} fmol/cell/min`);
-  if(Number.isFinite(cell.gcrLow)&&Number.isFinite(cell.gcrHigh))bounds.push(`GCR ${fmt(cell.gcrLow,2)}–${fmt(cell.gcrHigh,2)}`);
-  if(Number.isFinite(cell.lprLow)&&Number.isFinite(cell.lprHigh))bounds.push(`LPR ${fmt(cell.lprLow,2)}–${fmt(cell.lprHigh,2)}`);
-  const basis=cell.rateBasis||cell.estimateBasis||'embedded rate record';
-  const suffix=bounds.length?` Bounds: ${bounds.join('; ')}.`:'';
-  if(tierRaw==='A')return {type:'ok',title:`High rate confidence · Tier A · ${cell.name}`,detail:`Exact or close citation-bound measured rates are available. Use about 50–70% of the predicted useful window until the droplet/oil exchange parameters are calibrated.${suffix} Basis: ${basis}`};
-  if(tierRaw==='B')return {type:'warn',title:`Moderate rate confidence · Tier B · ${cell.name}`,detail:`Rates are supported by same-family, partial, or condition-adjacent measurements. Use about 50–70% of the predicted useful window and run low/nominal/high-rate scenarios for quantitative planning.${suffix} Basis: ${basis}`};
-  if(tierRaw==='C')return {type:'danger',title:`Low rate confidence · Tier C · ${cell.name}`,detail:`No exact line-specific metabolic profile is embedded; this row uses empirical measured-corpus medians or lineage fallback rates. Use about 25–50% of the predicted useful window unless calibrated with your own depletion or OCR data.${suffix} Basis: ${basis}`};
-  if(tierRaw==='CUSTOM')return {type:'warn',title:`Custom rate confidence · ${cell.name}`,detail:'The forecast depends entirely on the custom OCR, glucose, lactate, and glutamine rates you entered. If those values are measured under matching conditions, use about 50–70% of the predicted useful window; otherwise use about 25–50% until calibrated.'};
-  return {type:'warn',title:`Unspecified rate confidence · ${cell.name}`,detail:`This cell line lacks a formal A/B/C confidence tier. Treat the output conservatively: use about 25–50% of the predicted useful window or replace rates with measured values. Basis: ${basis}`};
-}
-function updateConfidenceBanner(cell){
-  const box=$('#confidenceBanner'); if(!box)return;
-  const c=confidenceForCell(cell);
-  box.className=`notice ${c.type} confidence-banner`;
-  box.innerHTML=`<span class="confidence-title">${c.title}</span><span class="confidence-detail">${c.detail}</span>`;
-}
-function updateDynamicUI(){syncVesselControls('main'); const spec=vesselSpec(); const phases=phaseVolumes(); if(spec.id!=='custom'&&spec.diameter_mm)$('#vesselDiameter').value=spec.diameter_mm; if(spec.id!=='custom'&&Number.isFinite(spec.capacity_uL)){const ah=autoHeadspace_mL(spec); $('#headspaceVolume').value=ah>=0?fmt(ah,3):'0';} const v=volumeFromSlider($('#volumeT').value); $('#volumeReadout').textContent=v<1?`${fmt(v*1000,0)} pL`:`${fmt(v,2)} nL`; $('#aqFracReadout').textContent=$('#aqueousFraction').value+'%'; $('#gradReadout').textContent=fmt(Number($('#gradientFactor').value),2)+'×'; const diam=Math.max(.2,Number($('#vesselDiameter')?.value)||6), area=spec.kind==='tubing'?Math.PI*diam*(Math.max(1,Number($('#tubingLength')?.value)||1000)):Math.PI*Math.pow(diam/2,2), depth=spec.kind==='tubing'?diam/2:phases.Vemul_uL/Math.max(.001,area); $('#depthReadout').textContent=spec.kind==='tubing'?`r ${fmt(depth,2)} mm`:fmt(depth,2)+' mm'; $('#vesselReadout').textContent=spec.kind==='tubing'?`${fmt(spec.capacity_uL,1)} µL capacity`:`${fmt(spec.capacity_uL/1000,2)} mL capacity`; $('#tempReadout').textContent=fmt(Number($('#temperature').value),1)+' °C'; $('#customGasBox').classList.toggle('hidden',$('#headspaceGas').value!=='custom'); const cgb=$('#customGasBalance'); if(cgb){const o2=Number($('#customO2')?.value)||0,co2=Number($('#customCO2')?.value)||0,b=100-o2-co2; cgb.textContent=b>=0?`Balance gas: ${fmt(b,1)}%. O₂ + CO₂ must be ≤ 100%.`:`Invalid gas mixture: O₂ + CO₂ = ${fmt(o2+co2,1)}%. Reduce one gas so the total is ≤ 100%.`; cgb.style.color=b>=0?'':'var(--danger)';} $('#customCellFields').classList.toggle('hidden',$('#cellLine').value!=='custom'); $('#customMediumFields').classList.toggle('hidden',$('#medium').value!=='custom_medium'); const cell=DATA.cellLines[$('#cellLine').value]; const med=DATA.media[$('#medium').value]; updateConfidenceBanner(cell); $('#cellMeta').textContent=cell ? [cell.fullName||cell.name, cell.rateTier?('rate tier '+cell.rateTier):(cell.evidenceTier?('Tier '+cell.evidenceTier):''), cell.ocrLow?('OCR '+fmt(cell.ocrLow,2)+'–'+fmt(cell.ocrHigh,2)+' fmol/min'):'' , cell.gcrLow?('GCR '+fmt(cell.gcrLow,2)+'–'+fmt(cell.gcrHigh,2)):'' , cell.recommendedMedium?('medium: '+cell.recommendedMedium):'', cell.rateBasis||cell.estimateBasis||''].filter(Boolean).join(' · ') : '—'; $('#mediumMeta').textContent=med&&med.glc!=null?`${fmt(med.glc,1)} mM glucose`:'custom'; const w=Number($('#warburgOverride').value); $('#warburgReadout').textContent=w<0?'auto':fmt(w,2); const p=quickPopulation(v); $('#poissonReadout').textContent=`P0 ${fmt(p.p0*100,1)}%, P1 ${fmt(p.p1*100,1)}%`; $('#poissonCards').innerHTML=[['Droplets',fmt(p.N,0)],['Expected cells',fmt(p.cells,0)],['Empty droplets',fmt(p.empty,0)],['Single-cell droplets',fmt(p.single,0)],['Multi-cell droplets',fmt(p.multi,0)],['Aqueous droplet volume',fmtVol(phases.Vaq_uL)],['Continuous oil in emulsion',fmtVol(phases.VoilEmul_uL)],['Excess reservoir oil',fmtVol(phases.residualOil_uL)],['Total oil volume',fmtVol(phases.totalOil_uL)],['Liquid fill',fmtVol(phases.liquid_uL)],['Closed headspace',autoHeadspace_mL(spec)>=0?fmt(autoHeadspace_mL(spec),3)+' mL':'invalid']].map(x=>`<div class="model-box"><div class="top">${x[0]}</div><div class="big mono">${x[1]}</div></div>`).join(''); const checked=Object.values(DATA.additives).filter(a=>$(`#add_${a.id}`)?.checked).slice(0,5); $('#additiveChips').innerHTML=checked.map(a=>`<span class="chip">${a.name}</span>`).join('') || '<span class="chip">No additives</span>';}
-function quickPopulation(v){const phases=phaseVolumes(); const Vaq=phases.Vaq_uL; const N=Math.max(1,Vaq*1000/v); const lam=Math.max(0,Number($('#lambda').value)||0); const p0=Math.exp(-lam), p1=lam*p0; return {Vaq,N,p0,p1,cells:lam*N,empty:p0*N,single:p1*N,multi:Math.max(0,N*(1-p0-p1))};}
 function poissonPMF(k,lambda){if(k<0||lambda<0)return 0; let logp=-lambda+k*Math.log(Math.max(lambda,1e-300)); for(let i=2;i<=k;i++)logp-=Math.log(i); return Math.exp(logp);}
 function buildOccupancyModel(lambda,N,targetCells){
   const otherDroplets=Math.max(0,N-1);
@@ -772,194 +633,6 @@ function dryGasPctToHeadspaceMoles(pct,headspace_mL,T){const frac=clamp((pct||0)
 function headspaceCapacityO2(headspace_mL,T){if(!(headspace_mL>0))return 0; const kh=PHYS.kH_O2_37C_mM_atm*Math.exp(-.025*(T-37)); return 1e12*(headspace_mL/1000)/(kh*PHYS.R*(273.15+T));}
 function headspaceCapacityCO2(headspace_mL,T){if(!(headspace_mL>0))return 0; const kh=PHYS.kH_CO2_37C_mM_atm*Math.exp(-.025*(T-37)); return 1e15*(headspace_mL/1000)/(kh*PHYS.R*(273.15+T));}
 function thresholdFromMode(value,mode,selectedEq,airEq){if(mode==='absolute_uM')return Math.max(0,value); if(mode==='air_pct')return Math.max(0,airEq*value/100); return Math.max(0,selectedEq*value/100);}
-function gatherParams(){
-  const T=Number($('#temperature').value);
-  const gas=gasPreset();
-  const airGas={o2:.2095,co2:.0004};
-  const cellRaw=DATA.cellLines[$('#cellLine').value], medRaw=DATA.media[$('#medium').value], oil=DATA.oils[$('#oilType').value];
-  const cell={...cellRaw};
-  if(cell.id==='custom'){
-    cell.ocr=Number.isFinite(Number($('#customOCR').value))?Number($('#customOCR').value):0;
-    cell.gcr=Number.isFinite(Number($('#customGCR').value))?Number($('#customGCR').value):0;
-    cell.lpr=Number.isFinite(Number($('#customLPR').value))?Number($('#customLPR').value):0;
-    cell.gln=Number.isFinite(Number($('#customGlnCR').value))?Number($('#customGlnCR').value):0;
-    cell.dt=Number.isFinite(Number($('#doublingTime').value))?Number($('#doublingTime').value):24;
-    cell.lag=Number.isFinite(Number($('#lagPhase').value))?Number($('#lagPhase').value):0;
-  }
-  const med={...medRaw};
-  if(med.id==='custom_medium'){
-    med.glc=Number($('#customGlucose').value)||0;
-    med.gln=Number($('#customGln').value)||0;
-    med.bicarb=Number($('#customBicarb').value)||0;
-    med.buffer=Number($('#customBuffer').value)||1;
-    med.pyr=0;
-    med.lac=0;
-  }
-  let rates={ocr:cell.ocr||0,gcr:cell.gcr||0,lpr:cell.lpr||0,gln:cell.gln||0};
-  let sub={glc:med.glc||0,gln:med.gln||0,pyr:med.pyr||0,bicarb:med.bicarb||0,lac:med.lac||0};
-  let buffer=med.buffer||1;
-  const warningSet=new Set(), warnings=[];
-  const warn=(type,text)=>{const key=type+'|'+text; if(!warningSet.has(key)){warningSet.add(key); warnings.push({type,text});}};
-  const conflictPairs=new Set();
-  for(const a of Object.values(DATA.additives)){
-    const cb=$(`#add_${a.id}`);
-    if(!cb||!cb.checked)continue;
-    const v=Number($(`#qty_${a.id}`).value)||0;
-    if(a.conflict){
-      for(const c of a.conflict){
-        if($(`#add_${c}`)?.checked){
-          const pair=[a.id,c].sort().join(':');
-          if(!conflictPairs.has(pair)){
-            conflictPairs.add(pair);
-            warn('warn',`${DATA.additives[pair.split(':')[0]].name} and ${DATA.additives[pair.split(':')[1]].name} are both selected; verify intended glutamine source.`);
-          }
-        }
-      }
-    }
-    for(const [k,fn] of Object.entries(a.mod||{}))rates[k]*=fn(v);
-    for(const [k,fn] of Object.entries(a.add||{}))sub[k]=(sub[k]||0)+fn(v);
-    if(a.buffer)buffer+=a.buffer(v);
-  }
-  const war=Number($('#warburgOverride').value);
-  if(war>=0){
-    const base=cell.warburg??.5;
-    rates.ocr*=clamp(1-.35*(war-base),.25,2.5);
-    rates.gcr*=clamp(1+.75*(war-base),.25,3);
-    rates.lpr*=clamp(1+1.0*(war-base),.25,4);
-    rates.gln*=clamp(1+.45*(war-base),.25,3);
-  }
-  ['ocr','gcr','lpr','gln'].forEach(k=>{
-    const id={ocr:'ocrOverride',gcr:'gcrOverride',lpr:'lprOverride',gln:'glnOverride'}[k];
-    const val=Number($('#'+id).value);
-    if(Number.isFinite(val)&&val>=0&&$('#'+id).value!=='')rates[k]=val;
-  });
-  const rateOverridesActive=['ocrOverride','gcrOverride','lprOverride','glnOverride'].some(id=>String($('#'+id)?.value??'').trim()!=='');
-  const rateTemperatureMode=$('#rateTemperatureMode')?.value||'reference_37c_q10';
-  const q10Factor={ocr:1,gcr:1,lpr:1,gln:1};
-  if(rateTemperatureMode==='reference_37c_q10'){
-    q10Factor.ocr=Math.pow(PHYS.Q10_OCR,(T-37)/10);
-    q10Factor.gcr=Math.pow(PHYS.Q10_GCR,(T-37)/10);
-    q10Factor.lpr=Math.pow(PHYS.Q10_LPR,(T-37)/10);
-    q10Factor.gln=Math.pow(PHYS.Q10_GLN,(T-37)/10);
-    rates.ocr*=q10Factor.ocr;
-    rates.gcr*=q10Factor.gcr;
-    rates.lpr*=q10Factor.lpr;
-    rates.gln*=q10Factor.gln;
-  }
-
-  const volume_nL=volumeFromSlider($('#volumeT').value);
-  const pop=quickPopulation(volume_nL);
-  const phases=phaseVolumes();
-  const totalEmulsion_uL=phases.Vemul_uL;
-  const Vaq_uL=phases.Vaq_uL;
-  const VoilEmul_uL=phases.VoilEmul_uL;
-  const residualOil_uL=phases.residualOil_uL;
-  const totalOil_uL=phases.totalOil_uL;
-  const liquidFill_uL=phases.liquid_uL;
-  const vessel=vesselSpec();
-  const vesselDiameter_mm=Math.max(.2,Number($('#vesselDiameter')?.value)||vessel.diameter_mm||6);
-  const tubingLength_mm=Math.max(1,Number($('#tubingLength')?.value)||vessel.length_mm||1000);
-  const tubingCrossSection_mm2=Math.PI*Math.pow(vesselDiameter_mm/2,2);
-  const vesselCapacity_uL=vessel.kind==='tubing'?tubingCrossSection_mm2*tubingLength_mm:(Number.isFinite(vessel.capacity_uL)?vessel.capacity_uL:null);
-  const filledTubingLength_mm=vessel.kind==='tubing'?Math.min(tubingLength_mm,liquidFill_uL/Math.max(1e-9,tubingCrossSection_mm2)):null;
-  const vesselArea_mm2=vessel.kind==='tubing'?Math.PI*vesselDiameter_mm*Math.max(0,filledTubingLength_mm||0):Math.PI*Math.pow(vesselDiameter_mm/2,2);
-  const emulsionDepth_mm=vessel.kind==='tubing'?vesselDiameter_mm/2:totalEmulsion_uL/Math.max(.001,vesselArea_mm2);
-  const residualOilDepth_mm=vessel.kind==='tubing'?0:residualOil_uL/Math.max(.001,vesselArea_mm2);
-  const O2eq=o2Eq(T,gas);
-  const airO2Eq=o2Eq(T,airGas);
-  const CO2eq=co2Eq(T,gas);
-  const pHBoundaryMode=$('#pHBoundaryMode')?.value||'fixed_starting_pH_boundary';
-  const pHModel=$('#pHModel')?.value||'carbonate_alkalinity';
-  const pH0Input=Number.isFinite(Number($('#pH0').value))?Number($('#pH0').value):7.4;
-  const CO2FromStartingPH=(sub.bicarb>0.5)?clamp(sub.bicarb/Math.pow(10,pH0Input-carbonateConstants(T).pKa1),0.001,200):CO2eq;
-  const CO2Initial=CO2FromStartingPH;
-  const CO2Boundary=(sub.bicarb>0.5?(pHBoundaryMode==='fixed_starting_pH_boundary'?CO2FromStartingPH:CO2eq):CO2eq);
-  let headspace_mL=($('#vesselPreset')?.value&&$('#vesselPreset').value!=='custom')?autoHeadspace_mL(vessel):Math.max(0,Number.isFinite(Number($('#headspaceVolume').value))?Number($('#headspaceVolume').value):0);
-  const invalid=[];
-  if(gas.custom&&gas.o2+gas.co2>1+1e-9)invalid.push(`Custom gas O₂ + CO₂ cannot exceed 100%; current total is ${fmt((gas.o2+gas.co2)*100,1)}%.`);
-  if(vessel.id!=='custom'&&Number.isFinite(vesselCapacity_uL)&&liquidFill_uL>vesselCapacity_uL)invalid.push(`Liquid fill ${fmt(liquidFill_uL/1000,3)} mL exceeds ${vessel.name} capacity ${fmt(vesselCapacity_uL/1000,3)} mL.`);
-  if(vessel.kind==='tubing'&&Number.isFinite(vesselCapacity_uL)&&liquidFill_uL>vesselCapacity_uL)invalid.push('Liquid fill exceeds PTFE tubing capacity; increase tubing length or reduce liquid volume.');
-  if(headspace_mL<0)headspace_mL=0;
-
-  const targetCellsInput=Number($('#targetCells').value);
-  const targetCells=Number.isFinite(targetCellsInput)?targetCellsInput:1;
-  const lambdaInput=Number($('#lambda').value);
-  const lambda=Number.isFinite(lambdaInput)?lambdaInput:0;
-  const targetProbability=poissonPMF(targetCells,lambda);
-  const occupancy=buildOccupancyModel(lambda,pop.N,targetCells);
-  const initHeadspaceO2Pct=clamp(Number.isFinite(Number($('#initHeadspaceO2Pct')?.value))?Number($('#initHeadspaceO2Pct')?.value):gas.o2*100,0,100);
-  const initHeadspaceCO2Pct=clamp(Number.isFinite(Number($('#initHeadspaceCO2Pct')?.value))?Number($('#initHeadspaceCO2Pct')?.value):gas.co2*100,0,100);
-  const thresholdMode=$('#o2ThresholdMode')?.value||'selected_pct';
-  const thresholdValue=Math.max(0,Number($('#hypoxiaPct').value)||0);
-  const rawInputs=captureRawInputs();
-  const p={
-    T,gas,cell,med,oil,rates,sub,buffer,warnings,invalid,
-    volume_nL,targetCells,lambda,targetProbability,N:pop.N,p0:pop.p0,p1:pop.p1,empty:pop.empty,single:pop.single,multi:pop.multi,
-    totalCells:occupancy.expectedTotalCells,bulkInitialCells:occupancy.expectedBulkCells,occupancy,occupiedDroplets:occupancy.occupiedDroplets,occupiedFraction:occupancy.occupiedFraction,
-    totalEmulsion_uL,Vaq_uL,VoilEmul_uL,residualOil_uL,totalOil_uL,liquidFill_uL,vessel,vesselCapacity_uL,tubingLength_mm,filledTubingLength_mm,
-    vesselDiameter_mm,vesselArea_mm2,emulsionDepth_mm,residualOilDepth_mm,
-    CO2Initial,CO2Boundary,pHBoundaryMode,pHModel,geometryMode:$('#geometryMode')?.value||'auto',modelTier:$('#modelTier')?.value||'heuristic',halfTimeMode:$('#halfTimeMode')?.value||'reference_scaled',rateTemperatureMode,q10Factor,
-    O2eq,airO2Eq,CO2eq,atmMode:$('#atmMode').value,headspace_mL,
-    initHeadspaceO2Pct,initHeadspaceCO2Pct,
-    headO2Initial:dryGasPctToHeadspaceMoles(initHeadspaceO2Pct,headspace_mL,T),
-    headCO2Initial:dryGasPctToHeadspaceMoles(initHeadspaceCO2Pct,headspace_mL,T),
-    gasHalf:Number($('#gasHalf').value)||60,oilHalf:Number($('#oilHalf').value)||60,dropHalf:Number($('#dropHalf').value)||10,
-    gradientFactor:Number($('#gradientFactor').value)||1,centerPenalty:Number($('#centerPenalty').value)||1,storageMode:$('#storageMode').value,bulkO2Mode:$('#bulkO2Mode')?.value||'auto',
-    surfaceAccess:clamp(Number($('#surfaceAccess').value)||0,0,100)/100,pH0:Number($('#pH0').value)||7.4,pHFloor:Number($('#pHFloor').value)||6.8,
-    pHCeiling:Number($('#pHCeiling').value)||7.65,o2ThresholdMode:thresholdMode,o2ThresholdValue:thresholdValue,
-    initAqO2Pct:clamp((Number.isFinite(Number($('#initAqO2Pct')?.value))?Number($('#initAqO2Pct')?.value):100),0,300),
-    initOilO2Pct:clamp((Number.isFinite(Number($('#initOilO2Pct')?.value))?Number($('#initOilO2Pct')?.value):100),0,300),
-    initReservoirO2Pct:clamp((Number.isFinite(Number($('#initReservoirO2Pct')?.value))?Number($('#initReservoirO2Pct')?.value):100),0,300),
-    glucoseFloor:Math.max(0,(Number.isFinite(Number($('#glucoseFloor')?.value))?Number($('#glucoseFloor')?.value):0.1)),
-    glutamineFloor:Math.max(0,(Number.isFinite(Number($('#glutamineFloor')?.value))?Number($('#glutamineFloor')?.value):0.05)),
-    prolif:$('#proliferation').value==='on',dt_h:Number.isFinite(Number($('#doublingTime').value))?Number($('#doublingTime').value):(cell.dt||24),lag_h:Number.isFinite(Number($('#lagPhase').value))?Number($('#lagPhase').value):(cell.lag||0),
-    logStep:Number.isFinite(Number($('#logStep').value))?Number($('#logStep').value):30,maxDays:Number.isFinite(Number($('#maxDays').value))?Number($('#maxDays').value):14,decimals:Number.isFinite(Number($('#decimals').value))?Number($('#decimals').value):4,
-    marginWarning:Number($('#marginWarning').value)||12,carryingCellsPerNL:Math.max(1,Number($('#carryingCapacity')?.value)||300),
-    pasteurThreshold_uM:Number.isFinite(Number($('#pasteurThreshold')?.value))?Math.max(0,Number($('#pasteurThreshold')?.value)):20,pasteurMax:clamp(Number($('#pasteurMax')?.value)||1.8,1,5),
-    o2Km_uM:Math.max(1e-6,Number($('#o2Km')?.value)||1),rq:Math.max(0,cell.rq||1),estimatedWorkload:null,
-    rateScenarioSource:{customCell:cell.id==='custom',overridesActive:rateOverridesActive},rawInputs
-  };
-  p.o2Threshold=thresholdFromMode(p.o2ThresholdValue,p.o2ThresholdMode,p.O2eq,p.airO2Eq);
-  p.initialO2T=p.airO2Eq*p.initAqO2Pct/100;
-  p.initialO2B=p.initialO2T;
-  p.initialO2Oil=p.airO2Eq*p.initOilO2Pct/100;
-  p.initialO2Res=p.airO2Eq*p.initReservoirO2Pct/100;
-  p.DICInitial=carbonateBaseline(p).dic0;
-  p.chartO2Reference=Math.max(1,p.airO2Eq,p.O2eq,p.initialO2T,p.initialO2Oil,p.initialO2Res,p.o2Threshold);
-  hardValidateInputs(p);
-  p.estimatedWorkload=estimateSolverWorkload(p);
-
-  if(p.pH0<=p.pHFloor)warn('danger','Initial pH is at or below the pH floor; the endpoint will occur immediately unless limits are changed.');
-  if(p.vessel.id!=='custom'&&Number.isFinite(p.vesselCapacity_uL)&&liquidFill_uL>p.vesselCapacity_uL)warn('danger','Invalid geometry: liquid fill exceeds selected vessel capacity. The simulation is blocked until this is corrected.');
-  if(residualOil_uL>totalEmulsion_uL)warn('warn','Excess reservoir oil is larger than the generated droplet emulsion. This is valid for an oil overlay or loop, but if you meant a single total-liquid volume, set excess oil to 0 and use aqueous fraction to define the oil inside the emulsion.');
-  if(p.gas.o2>.15&&p.gas.co2<.005&&p.sub.bicarb>5&&p.pHBoundaryMode!=='fixed_starting_pH_boundary')warn('warn','Ambient-air boundary with bicarbonate medium can drive strong pH drift when the selected-gas CO₂ boundary is active. Use 5% CO₂/air for bicarbonate-buffered incubations unless ambient exposure is intentional.');
-  if(p.sub.bicarb>5&&p.pHBoundaryMode==='fixed_starting_pH_boundary')warn('warn','Bicarbonate pH is using an explicit infinite CO₂ reservoir matched to the starting pH. This is not a closed-system carbon balance.');
-  configCompatibilityIssues(p).forEach(text=>warn('danger',text));
-  if(p.atmMode==='closed'&&p.headspace_mL<=1e-9)warn('warn','Closed mode has zero headspace volume, so gas exchange with a headspace compartment is disabled.');
-  if(p.targetCells>p.carryingCellsPerNL*p.volume_nL)warn('warn','Initial target-cell count exceeds the proliferation carrying-capacity estimate for this droplet volume.');
-  if(p.targetProbability<0.001)warn('warn',`The evaluated droplet occupancy is very rare under λ: P(K=${p.targetCells}) = ${fmt(p.targetProbability*100,4)}%. Treat this as a stress-test droplet, not a representative droplet.`);
-  else if(p.targetProbability<0.01)warn('warn',`The evaluated droplet occupancy is uncommon under λ: P(K=${p.targetCells}) = ${fmt(p.targetProbability*100,3)}%.`);
-  const rt=String(cell.rateTier||cell.evidenceTier||'').toUpperCase();
-  if(['B','C','D'].includes(rt))warn('warn',`Cell-line metabolic rates are rate tier ${rt}; run low/nominal/high measured-rate scenarios before quantitative use.`);
-  if(p.modelTier==='heuristic'&&p.pHModel==='heuristic_legacy')warn('warn','Both the pH and growth layers remain heuristic. Use measured exchange half-times and direct endpoint validation for release-critical experiments.');
-  else if(p.modelTier==='heuristic')warn('warn','Growth remains heuristic. The pH layer is using the carbonate/alkalinity solver with linear non-bicarbonate buffer alkalinity, not a full ionic-strength charge-balance medium model.');
-  if(p.modelTier==='measured_inputs'&&p.halfTimeMode==='reference_scaled')warn('warn','Measured-input interpretation is active, but exchange half-times are still being treated as geometry-scaled reference values. Switch half-time interpretation to "effective measured" if your entered half-times already match this exact configuration.');
-  if(p.halfTimeMode==='measured_effective')warn('ok','Exchange half-times are being applied directly for the current configuration with no automatic geometry rescaling.');
-  if(p.rateTemperatureMode==='measured_selected_temperature')warn('ok','Custom and override rates are being used as already measured at the selected temperature; no Q10 correction is applied.');
-  if(p.atmMode==='closed'&&p.headO2Initial>0){
-    const oilDemand=(VoilEmul_uL+residualOil_uL)*1000*oil.capacityRatio*Math.max(p.initialO2Oil,p.O2eq);
-    if(oilDemand>p.headO2Initial*2)warn('warn','Closed headspace oxygen is small relative to the oil oxygen capacity; oil equilibration can rapidly shift headspace pO₂.');
-  }
-  if(p.sub.bicarb>0.5){
-    const initialBoundaryCO2=p.pHBoundaryMode==='fixed_starting_pH_boundary'?p.CO2Boundary:(p.pHBoundaryMode==='closed_headspace_mass_balance'?co2HeadEq({headCO2:p.headCO2Initial},p):p.CO2eq);
-    const pHEq=p.pHModel==='carbonate_alkalinity'?boundaryEquilibriumPH(initialBoundaryCO2,p):(carbonateConstants(p.T).pKa1+Math.log10(Math.max(.05,p.sub.bicarb)/Math.max(.001,initialBoundaryCO2)));
-    if(Math.abs(pHEq-p.pH0)>0.15)warn('warn',`Starting pH ${fmt(p.pH0,2)} is inconsistent with the ${p.pHModel==='carbonate_alkalinity'?'carbonate/alkalinity':'simplified bicarbonate'} equilibrium for the selected gas by about ${fmt(Math.abs(pHEq-p.pH0),2)} pH units. The run begins from a nonequilibrium state.`);
-  }
-  if(p.O2eq<5)warn('warn','Selected boundary gas is effectively anoxic. Initial liquid and closed-headspace oxygen are entered independently and may still start above zero.');
-  if(p.estimatedWorkload.estimatedSteps>500000)warn('warn',`Estimated solver workload is high at about ${fmt(p.estimatedWorkload.estimatedSteps,0)} accepted sub-steps. Auto-rerun is disabled for this configuration; use Calculate explicitly.`);
-  p.parameterProvenance=buildParameterProvenance(p);
-  return p;
-}
 function scenarioSpecs(){return [{id:'low_demand',label:'low metabolic demand'},{id:'nominal',label:'nominal'},{id:'high_demand',label:'high metabolic demand'}];}
 function scenarioBoundField(key,scenarioId){if(scenarioId==='low_demand')return key+'Low'; if(scenarioId==='high_demand')return key+'High'; return key;}
 function scenarioRatesFromParams(p,scenarioId){
@@ -1034,7 +707,6 @@ function runCalibrationFit(baseParams,config,progressCb=()=>{}){
   const observable=config?.observable||'O2T';
   const series=config?.series||[];
   const keys=calibrationParameterKeys(fitMode);
-  const timesMin=series.map(row=>row.time_h*60);
   const inferredStep=series.length>1?Math.max(0.05,Math.min(5,...series.slice(1).map((row,idx)=>Math.max(0.05,(row.time_h-series[idx].time_h)*60/4)))):0.5;
   const calibrationHorizonDays=Math.max(0.01,Math.max(...series.map(row=>row.time_h))/24+0.01);
   const makeParams=(updates={})=>({ ...baseParams, ...updates, estimatedWorkload:null, chartEveryMin:inferredStep, logStep:Math.max(1,inferredStep), maxDays:calibrationHorizonDays });
@@ -1109,24 +781,6 @@ function runCalibrationFit(baseParams,config,progressCb=()=>{}){
     predictionConditionsMatchCurrentSetup:true,
     thresholdSSE:threshold
   };
-}
-function renderScenarioTable(result){
-  const rows=(result&&result.rateScenarios)||[];
-  if(!rows.length){$('#scenarioTable tbody').innerHTML='<tr><td colspan="5">Run a calculation to populate deterministic rate scenarios.</td></tr>'; return;}
-  const body=rows.map(row=>`<tr><td>${row.label}${row.available?'':' *'}</td><td>${row.limiter==='simulation horizon'?'≥ '+hoursLabel(result.params.maxDays*24):hoursLabel(row.safeMin/60)}</td><td>${row.limiter}</td><td>${fmt(row.final.O2T,3)} µM</td><td>${fmt(row.final.pH,3)}</td></tr>`).join('');
-  const note=rows.some(row=>!row.available)?'<tr><td colspan="5">* Stored low/high bounds were unavailable for at least one scenario, so the current effective rates were reused.</td></tr>':'';
-  $('#scenarioTable tbody').innerHTML=body+note;
-}
-function renderCalibrationResult(result){
-  window.lastCalibration=result||null;
-  if(window.lastResult)window.lastResult.calibration=result||null;
-  if(!result){$('#calibrationSummary').textContent='Paste a measured O₂ series and run calibration to fit transport half-times for the current setup.'; $('#calibrationTable tbody').innerHTML='<tr><td colspan="4">Run calibration to populate residuals.</td></tr>'; return;}
-  const keyText=result.parameterKeys.map(key=>`${key} ${fmt(result.bestFit[key],3)} min`).join(' · ');
-  const intervalText=result.parameterKeys.map(key=>{const it=result.intervals[key]; return `${key} profile range ${fmt(it.low,3)}–${fmt(it.high,3)} min`;}).join(' · ');
-  const corrText=result.correlation==null?'single-parameter fit':`likelihood-weighted local correlation ${fmt(result.correlation,3)}`;
-  const warnings=(result.identifiabilityWarnings||[]).map(text=>`<div class="notice warn">${text}</div>`).join('');
-  $('#calibrationSummary').innerHTML=`<div><strong>Best fit:</strong> ${keyText}. <strong>RMSE:</strong> ${fmt(result.rmse,3)} µM across ${fmt(result.sampleCount,0)} points. <strong>Observable:</strong> ${result.observableLabel}. <strong>Conditions match current setup:</strong> ${result.predictionConditionsMatchCurrentSetup?'yes':'no'}.</div><div style="margin-top:6px">${intervalText}. ${corrText}.</div>${warnings}`;
-  $('#calibrationTable tbody').innerHTML=result.residuals.map(row=>`<tr><td>${fmt(row.time_h,3)} h</td><td>${fmt(row.observed,3)}</td><td>${fmt(row.predicted,3)}</td><td>${fmt(row.residual,3)}</td></tr>`).join('');
 }
 function geometryScales(p){
   if(p.halfTimeMode==='measured_effective'){
@@ -1618,6 +1272,352 @@ function computePH(s,p){if(p.pHModel==='carbonate_alkalinity')return s._targetCa
 function status(s,p){if(s.O2T<=p.o2Threshold)return 'Hypoxia'; if(s.Glc<=p.glucoseFloor)return 'Glucose depleted'; if(s.Gln<=p.glutamineFloor)return 'Glutamine depleted'; if(s.pH<=p.pHFloor)return 'Acidic'; if(s.pH>=p.pHCeiling)return 'Alkaline'; return 'Viable';}
 function halfFromK(k){return k>0?Math.log(2)/k:Infinity;}
 function initialFlux(p,capT,capBulk,capOilE,capOilR,geom=geometryScales(p)){const baseBulkCaps=occupancyCapacities(p); const bulkRegime=resolveBulkOxygenRegime(p,effectiveHalfTime(p.dropHalf,geom.dropBulk,p.halfTimeMode),baseBulkCaps); const bulkCaps=bulkCapacitiesForMode(baseBulkCaps,bulkRegime.selectedMode); const kin=buildKinetics(p,{capT,capBulk,capOilE,capOilR,...bulkCaps},geom); const initHeadEq=headEq({headO2:p.headO2Initial},p); const grouped=bulkCountsForMode(p,bulkRegime.selectedMode,0); const demand=oxygenLimitedRate(p.targetCells,p.initialO2T,p)+oxygenLimitedRate(grouped.single,p.initialO2B,p)+oxygenLimitedRate(grouped.multi,p.initialO2B,p); const boundaryRes=capOilR>0?kin.GgasRes*(initHeadEq-p.initialO2Res):0; const boundaryDirect=capOilE>0?kin.GgasDirect*(initHeadEq-p.initialO2Oil):0; const localTarget=kin.GdropTarget*(p.initialO2Oil-p.initialO2T); const localSingle=kin.GdropSingle*(p.initialO2Oil-p.initialO2B); const localMulti=kin.GdropMulti*(p.initialO2Oil-p.initialO2B); const localEmpty=kin.GdropEmpty*(p.initialO2Oil-p.initialO2B); const mix=kin.Goil*(p.initialO2Res-p.initialO2Oil); return {demand,boundaryNet:boundaryRes+boundaryDirect,boundaryIntoLiquid:Math.max(0,boundaryRes)+Math.max(0,boundaryDirect),boundaryOutOfLiquid:Math.max(0,-boundaryRes)+Math.max(0,-boundaryDirect),localNet:localTarget+localSingle+localMulti,localIntoDroplets:Math.max(0,localTarget)+Math.max(0,localSingle)+Math.max(0,localMulti),localOutOfDroplets:Math.max(0,-localTarget)+Math.max(0,-localSingle)+Math.max(0,-localMulti),localIntoEmptyDroplets:Math.max(0,localEmpty),localOutOfEmptyDroplets:Math.max(0,-localEmpty),mix,bulkO2Regime:bulkRegime};}
+function captureRawInputs(){
+  const raw={};
+  $$('input,select,textarea').forEach(el=>{
+    if(!el||!el.id)return;
+    raw[el.id]=el.type==='checkbox'?!!el.checked:String(el.value??'');
+  });
+  return raw;
+}
+function activeAdditiveSelections(){
+  return Object.values(DATA.additives||{}).filter(a=>$(`#add_${a.id}`)?.checked).map(a=>({id:a.id,name:a.name,quantity:Number($(`#qty_${a.id}`)?.value)||0}));
+}
+function buildParameterProvenance(p){
+  return {
+    cellLine:{id:p.cell?.id||null,name:p.cell?.name||null,source:p.cell?.id==='custom'?'user custom rates':'embedded cell-rate database',rateTier:p.cell?.rateTier||p.cell?.evidenceTier||null,rateBasis:p.cell?.rateBasis||p.cell?.estimateBasis||null},
+    medium:{id:p.med?.id||null,name:p.med?.name||null,source:p.med?.id==='custom_medium'?'user custom medium':'embedded medium database'},
+    oil:{id:p.oil?.id||null,name:p.oil?.name||null,source:'embedded oil/material database',capacityRatio:p.oil?.capacityRatio??null},
+    gasBoundary:{preset:$('#headspaceGas')?.value||null,name:p.gas?.name||null,source:p.gas?.custom?'user-entered gas mixture':'preset gas mixture',atmMode:p.atmMode},
+    vessel:{preset:$('#vesselPreset')?.value||null,environmentPreset:$('#vesselPresetEnv')?.value||null,name:p.vessel?.name||null,storageMode:p.storageMode,geometryMode:p.geometryMode},
+    rates:{temperatureMode:p.rateTemperatureMode,halfTimeMode:p.halfTimeMode,customCell:!!p.rateScenarioSource?.customCell,overridesActive:!!p.rateScenarioSource?.overridesActive,q10Factor:p.q10Factor,activeAdditives:activeAdditiveSelections()},
+    oxygen:{bulkO2ModeRequested:p.bulkO2Mode,thresholdMode:p.o2ThresholdMode,thresholdValue:p.o2ThresholdValue,initialAqPct:p.initAqO2Pct,initialOilPct:p.initOilO2Pct,initialReservoirPct:p.initReservoirO2Pct},
+    carbon:{pHBoundaryMode:p.pHBoundaryMode,pHModel:p.pHModel,trackedCarbonInventory:p.pHModel==='carbonate_alkalinity'?'target aqueous + grouped bulk aqueous DIC + optional finite headspace CO₂':'target aqueous + grouped bulk aqueous dissolved CO₂ + optional finite headspace CO₂'},
+  };
+}
+function artifactMetadata(){
+  return {
+    release:document.querySelector('meta[name="artifact-release"]')?.content||document.body.dataset.release||null,
+    commit:document.querySelector('meta[name="artifact-commit"]')?.content||null,
+    manifestSha256:document.querySelector('meta[name="artifact-manifest-sha256"]')?.content||null
+  };
+}
+function workerModelSource(){
+  const start=ARTIFACT_SCRIPT_TEXT.indexOf(WORKER_MODEL_START);
+  const end=ARTIFACT_SCRIPT_TEXT.indexOf(WORKER_MODEL_END);
+  if(start<0||end<0||end<=start)return null;
+  return ARTIFACT_SCRIPT_TEXT.slice(start,end);
+}
+function workerScriptSource(){
+  const model=workerModelSource();
+  if(!model)return null;
+  return `const window=self; const document={querySelector:()=>null,querySelectorAll:()=>[],getElementById:()=>null,body:{dataset:{}}}; const navigator={}; ${model}
+self.onmessage=(event)=>{
+  const {jobId,kind,payload}=event.data||{};
+  const progress=(progress)=>self.postMessage({type:'progress',jobId,kind,progress});
+  try{
+    if(kind==='simulate'){
+      const result=Engine.simulate(payload.params,{progress});
+      result.rateScenarios=buildRateScenarioResults(payload.params);
+      self.postMessage({type:'result',jobId,kind,result});
+      return;
+    }
+    if(kind==='scenarios'){
+      const rateScenarios=buildRateScenarioResults(payload.params);
+      self.postMessage({type:'result',jobId,kind,result:{params:payload.params,rateScenarios}});
+      return;
+    }
+    if(kind==='sweep'){
+      const vols=[.07,.17,.3,.7,1,2,5,7], lambdas=[.05,.1,.3,.8,1.5];
+      const rows=[]; const total=vols.length*lambdas.length; let done=0;
+      for(const v of vols){
+        for(const lam of lambdas){
+          const p={...payload.params,volume_nL:v,lambda:lam};
+          const N=Math.max(1,p.Vaq_uL*1000/v), p0=Math.exp(-lam), p1=lam*p0, occupancy=buildOccupancyModel(lam,N,p.targetCells);
+          Object.assign(p,{N,p0,p1,totalCells:occupancy.expectedTotalCells,bulkInitialCells:occupancy.expectedBulkCells,occupancy,occupiedDroplets:occupancy.occupiedDroplets,occupiedFraction:occupancy.occupiedFraction,empty:p0*N,single:p1*N,multi:Math.max(0,N*(1-p0-p1)),targetProbability:poissonPMF(p.targetCells,lam),chartO2Reference:Math.max(1,p.airO2Eq,p.O2eq,p.initialO2T,p.initialO2Oil,p.initialO2Res,p.o2Threshold)});
+          const r=Engine.simulate(p);
+          rows.push({volume_nL:v,lambda:lam,targetCells:p.targetCells,targetProbability:p.targetProbability,safeMin:r.safeMin,limiter:r.limiter,maxDays:p.maxDays});
+          done+=1;
+          progress({phase:'sweep',done,total,fraction:done/Math.max(1,total)});
+        }
+      }
+      self.postMessage({type:'result',jobId,kind,result:{rows}});
+      return;
+    }
+    if(kind==='calibration'){
+      const result=runCalibrationFit(payload.params,payload.config,progress);
+      self.postMessage({type:'result',jobId,kind,result});
+      return;
+    }
+    throw new Error('Unknown worker job: '+kind);
+  }catch(error){
+    self.postMessage({type:'error',jobId,kind,error:String(error&&error.stack?error.stack:error)});
+  }
+};`;
+}
+function workerSupported(){return typeof Worker==='function'&&!!workerModelSource();}
+function cleanupWorkerJob(){if(!activeWorkerJob)return; try{activeWorkerJob.worker.terminate();}catch(e){} try{URL.revokeObjectURL(activeWorkerJob.url);}catch(e){} activeWorkerJob=null;}
+function setWorkerRunState(running,progressText=''){const cancel=$('#cancelBtn'),calc=$('#calculateBtn'),sweep=$('#runSweepBtn'),scenarios=$('#runScenariosBtn'),calibration=$('#runCalibrationBtn'); if(cancel)cancel.disabled=!running; if(calc)calc.disabled=running; if(sweep)sweep.disabled=running; if(scenarios)scenarios.disabled=running; if(calibration)calibration.disabled=running; $('#progressNote').textContent=progressText||'';}
+function cancelActiveWorkerJob(message='Background run cancelled.'){if(!activeWorkerJob)return; cleanupWorkerJob(); setWorkerRunState(false,''); $('#lastRun').textContent=message;}
+function startWorkerJob(kind,payload,{startText,onResult,onProgress,onError}={}){
+  if(!workerSupported())return false;
+  cancelActiveWorkerJob('');
+  const source=workerScriptSource();
+  if(!source)return false;
+  const jobId=`${kind}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+  const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
+  const worker=new Worker(url);
+  activeWorkerJob={jobId,kind,worker,url};
+  setWorkerRunState(true,'');
+  $('#lastRun').textContent=startText||'Running in background…';
+  worker.onmessage=(event)=>{
+    if(!activeWorkerJob||activeWorkerJob.jobId!==jobId)return;
+    const msg=event.data||{};
+    if(msg.type==='progress'){if(onProgress)onProgress(msg.progress||{}); return;}
+    if(msg.type==='result'){cleanupWorkerJob(); setWorkerRunState(false,''); if(onResult)onResult(msg.result); return;}
+    if(msg.type==='error'){cleanupWorkerJob(); setWorkerRunState(false,''); if(onError)onError(msg.error||'Worker error');}
+  };
+  worker.postMessage({jobId,kind,payload});
+  return true;
+}
+function formatWorkerProgress(kind,progress){
+  if(kind==='simulate')return `Worker progress ${fmt((progress.fraction||0)*100,0)}% · ${fmt(progress.acceptedSteps||0,0)} accepted steps`;
+  if(kind==='sweep')return `Sweep progress ${fmt((progress.fraction||0)*100,0)}% · ${fmt(progress.done||0,0)}/${fmt(progress.total||0,0)} cases`;
+  if(kind==='calibration')return `Calibration progress ${fmt((progress.fraction||0)*100,0)}% · ${fmt(progress.done||0,0)}/${fmt(progress.total||0,0)} fits`;
+  return 'Worker running…';
+}
+function liquidVolume_uL(){return phaseVolumes().liquid_uL;}
+function autoHeadspace_mL(spec= vesselSpec()){if(spec.id==='custom'||!Number.isFinite(spec.capacity_uL))return Math.max(0,Number($('#headspaceVolume')?.value)||0); return (spec.capacity_uL-liquidVolume_uL())/1000;}
+function confidenceForCell(cell){
+  if(!cell)return {type:'warn',title:'Rate confidence unavailable',detail:'Select a cell line before interpreting the useful-window forecast.'};
+  const tierRaw=String(cell.rateTier||cell.evidenceTier||(cell.id==='custom'?'CUSTOM':'UNSPECIFIED')).toUpperCase();
+  const bounds=[];
+  if(Number.isFinite(cell.ocrLow)&&Number.isFinite(cell.ocrHigh))bounds.push(`OCR ${fmt(cell.ocrLow,2)}–${fmt(cell.ocrHigh,2)} fmol/cell/min`);
+  if(Number.isFinite(cell.gcrLow)&&Number.isFinite(cell.gcrHigh))bounds.push(`GCR ${fmt(cell.gcrLow,2)}–${fmt(cell.gcrHigh,2)}`);
+  if(Number.isFinite(cell.lprLow)&&Number.isFinite(cell.lprHigh))bounds.push(`LPR ${fmt(cell.lprLow,2)}–${fmt(cell.lprHigh,2)}`);
+  const basis=cell.rateBasis||cell.estimateBasis||'embedded rate record';
+  const suffix=bounds.length?` Bounds: ${bounds.join('; ')}.`:'';
+  if(tierRaw==='A')return {type:'ok',title:`High rate confidence · Tier A · ${cell.name}`,detail:`Exact or close citation-bound measured rates are available. Use about 50–70% of the predicted useful window until the droplet/oil exchange parameters are calibrated.${suffix} Basis: ${basis}`};
+  if(tierRaw==='B')return {type:'warn',title:`Moderate rate confidence · Tier B · ${cell.name}`,detail:`Rates are supported by same-family, partial, or condition-adjacent measurements. Use about 50–70% of the predicted useful window and run low/nominal/high-rate scenarios for quantitative planning.${suffix} Basis: ${basis}`};
+  if(tierRaw==='C')return {type:'danger',title:`Low rate confidence · Tier C · ${cell.name}`,detail:`No exact line-specific metabolic profile is embedded; this row uses empirical measured-corpus medians or lineage fallback rates. Use about 25–50% of the predicted useful window unless calibrated with your own depletion or OCR data.${suffix} Basis: ${basis}`};
+  if(tierRaw==='CUSTOM')return {type:'warn',title:`Custom rate confidence · ${cell.name}`,detail:'The forecast depends entirely on the custom OCR, glucose, lactate, and glutamine rates you entered. If those values are measured under matching conditions, use about 50–70% of the predicted useful window; otherwise use about 25–50% until calibrated.'};
+  return {type:'warn',title:`Unspecified rate confidence · ${cell.name}`,detail:`This cell line lacks a formal A/B/C confidence tier. Treat the output conservatively: use about 25–50% of the predicted useful window or replace rates with measured values. Basis: ${basis}`};
+}
+function updateConfidenceBanner(cell){
+  const box=$('#confidenceBanner'); if(!box)return;
+  const c=confidenceForCell(cell);
+  box.className=`notice ${c.type} confidence-banner`;
+  box.innerHTML=`<span class="confidence-title">${c.title}</span><span class="confidence-detail">${c.detail}</span>`;
+}
+function updateDynamicUI(){syncVesselControls('main'); const spec=vesselSpec(); const phases=phaseVolumes(); if(spec.id!=='custom'&&spec.diameter_mm)$('#vesselDiameter').value=spec.diameter_mm; if(spec.id!=='custom'&&Number.isFinite(spec.capacity_uL)){const ah=autoHeadspace_mL(spec); $('#headspaceVolume').value=ah>=0?fmt(ah,3):'0';} const v=volumeFromSlider($('#volumeT').value); $('#volumeReadout').textContent=v<1?`${fmt(v*1000,0)} pL`:`${fmt(v,2)} nL`; $('#aqFracReadout').textContent=$('#aqueousFraction').value+'%'; $('#gradReadout').textContent=fmt(Number($('#gradientFactor').value),2)+'×'; const diam=Math.max(.2,Number($('#vesselDiameter')?.value)||6), area=spec.kind==='tubing'?Math.PI*diam*(Math.max(1,Number($('#tubingLength')?.value)||1000)):Math.PI*Math.pow(diam/2,2), depth=spec.kind==='tubing'?diam/2:phases.Vemul_uL/Math.max(.001,area); $('#depthReadout').textContent=spec.kind==='tubing'?`r ${fmt(depth,2)} mm`:fmt(depth,2)+' mm'; $('#vesselReadout').textContent=spec.kind==='tubing'?`${fmt(spec.capacity_uL,1)} µL capacity`:`${fmt(spec.capacity_uL/1000,2)} mL capacity`; $('#tempReadout').textContent=fmt(Number($('#temperature').value),1)+' °C'; $('#customGasBox').classList.toggle('hidden',$('#headspaceGas').value!=='custom'); const cgb=$('#customGasBalance'); if(cgb){const o2=Number($('#customO2')?.value)||0,co2=Number($('#customCO2')?.value)||0,b=100-o2-co2; cgb.textContent=b>=0?`Balance gas: ${fmt(b,1)}%. O₂ + CO₂ must be ≤ 100%.`:`Invalid gas mixture: O₂ + CO₂ = ${fmt(o2+co2,1)}%. Reduce one gas so the total is ≤ 100%.`; cgb.style.color=b>=0?'':'var(--danger)';} $('#customCellFields').classList.toggle('hidden',$('#cellLine').value!=='custom'); $('#customMediumFields').classList.toggle('hidden',$('#medium').value!=='custom_medium'); const cell=DATA.cellLines[$('#cellLine').value]; const med=DATA.media[$('#medium').value]; updateConfidenceBanner(cell); $('#cellMeta').textContent=cell ? [cell.fullName||cell.name, cell.rateTier?('rate tier '+cell.rateTier):(cell.evidenceTier?('Tier '+cell.evidenceTier):''), cell.ocrLow?('OCR '+fmt(cell.ocrLow,2)+'–'+fmt(cell.ocrHigh,2)+' fmol/min'):'' , cell.gcrLow?('GCR '+fmt(cell.gcrLow,2)+'–'+fmt(cell.gcrHigh,2)):'' , cell.recommendedMedium?('medium: '+cell.recommendedMedium):'', cell.rateBasis||cell.estimateBasis||''].filter(Boolean).join(' · ') : '—'; $('#mediumMeta').textContent=med&&med.glc!=null?`${fmt(med.glc,1)} mM glucose`:'custom'; const w=Number($('#warburgOverride').value); $('#warburgReadout').textContent=w<0?'auto':fmt(w,2); const p=quickPopulation(v); $('#poissonReadout').textContent=`P0 ${fmt(p.p0*100,1)}%, P1 ${fmt(p.p1*100,1)}%`; $('#poissonCards').innerHTML=[['Droplets',fmt(p.N,0)],['Expected cells',fmt(p.cells,0)],['Empty droplets',fmt(p.empty,0)],['Single-cell droplets',fmt(p.single,0)],['Multi-cell droplets',fmt(p.multi,0)],['Aqueous droplet volume',fmtVol(phases.Vaq_uL)],['Continuous oil in emulsion',fmtVol(phases.VoilEmul_uL)],['Excess reservoir oil',fmtVol(phases.residualOil_uL)],['Total oil volume',fmtVol(phases.totalOil_uL)],['Liquid fill',fmtVol(phases.liquid_uL)],['Closed headspace',autoHeadspace_mL(spec)>=0?fmt(autoHeadspace_mL(spec),3)+' mL':'invalid']].map(x=>`<div class="model-box"><div class="top">${x[0]}</div><div class="big mono">${x[1]}</div></div>`).join(''); const checked=Object.values(DATA.additives).filter(a=>$(`#add_${a.id}`)?.checked).slice(0,5); $('#additiveChips').innerHTML=checked.map(a=>`<span class="chip">${a.name}</span>`).join('') || '<span class="chip">No additives</span>';}
+function quickPopulation(v){const phases=phaseVolumes(); const Vaq=phases.Vaq_uL; const N=Math.max(1,Vaq*1000/v); const lam=Math.max(0,Number($('#lambda').value)||0); const p0=Math.exp(-lam), p1=lam*p0; return {Vaq,N,p0,p1,cells:lam*N,empty:p0*N,single:p1*N,multi:Math.max(0,N*(1-p0-p1))};}
+// Pure simulation and calibration helpers live in src/model/10_engine_and_calibration.js.
+function gatherParams(){
+  const T=Number($('#temperature').value);
+  const gas=gasPreset();
+  const airGas={o2:.2095,co2:.0004};
+  const cellRaw=DATA.cellLines[$('#cellLine').value], medRaw=DATA.media[$('#medium').value], oil=DATA.oils[$('#oilType').value];
+  const cell={...cellRaw};
+  if(cell.id==='custom'){
+    cell.ocr=Number.isFinite(Number($('#customOCR').value))?Number($('#customOCR').value):0;
+    cell.gcr=Number.isFinite(Number($('#customGCR').value))?Number($('#customGCR').value):0;
+    cell.lpr=Number.isFinite(Number($('#customLPR').value))?Number($('#customLPR').value):0;
+    cell.gln=Number.isFinite(Number($('#customGlnCR').value))?Number($('#customGlnCR').value):0;
+    cell.dt=Number.isFinite(Number($('#doublingTime').value))?Number($('#doublingTime').value):24;
+    cell.lag=Number.isFinite(Number($('#lagPhase').value))?Number($('#lagPhase').value):0;
+  }
+  const med={...medRaw};
+  if(med.id==='custom_medium'){
+    med.glc=Number($('#customGlucose').value)||0;
+    med.gln=Number($('#customGln').value)||0;
+    med.bicarb=Number($('#customBicarb').value)||0;
+    med.buffer=Number($('#customBuffer').value)||1;
+    med.pyr=0;
+    med.lac=0;
+  }
+  let rates={ocr:cell.ocr||0,gcr:cell.gcr||0,lpr:cell.lpr||0,gln:cell.gln||0};
+  let sub={glc:med.glc||0,gln:med.gln||0,pyr:med.pyr||0,bicarb:med.bicarb||0,lac:med.lac||0};
+  let buffer=med.buffer||1;
+  const warningSet=new Set(), warnings=[];
+  const warn=(type,text)=>{const key=type+'|'+text; if(!warningSet.has(key)){warningSet.add(key); warnings.push({type,text});}};
+  const conflictPairs=new Set();
+  for(const a of Object.values(DATA.additives)){
+    const cb=$(`#add_${a.id}`);
+    if(!cb||!cb.checked)continue;
+    const v=Number($(`#qty_${a.id}`).value)||0;
+    if(a.conflict){
+      for(const c of a.conflict){
+        if($(`#add_${c}`)?.checked){
+          const pair=[a.id,c].sort().join(':');
+          if(!conflictPairs.has(pair)){
+            conflictPairs.add(pair);
+            warn('warn',`${DATA.additives[pair.split(':')[0]].name} and ${DATA.additives[pair.split(':')[1]].name} are both selected; verify intended glutamine source.`);
+          }
+        }
+      }
+    }
+    for(const [k,fn] of Object.entries(a.mod||{}))rates[k]*=fn(v);
+    for(const [k,fn] of Object.entries(a.add||{}))sub[k]=(sub[k]||0)+fn(v);
+    if(a.buffer)buffer+=a.buffer(v);
+  }
+  const war=Number($('#warburgOverride').value);
+  if(war>=0){
+    const base=cell.warburg??.5;
+    rates.ocr*=clamp(1-.35*(war-base),.25,2.5);
+    rates.gcr*=clamp(1+.75*(war-base),.25,3);
+    rates.lpr*=clamp(1+1.0*(war-base),.25,4);
+    rates.gln*=clamp(1+.45*(war-base),.25,3);
+  }
+  ['ocr','gcr','lpr','gln'].forEach(k=>{
+    const id={ocr:'ocrOverride',gcr:'gcrOverride',lpr:'lprOverride',gln:'glnOverride'}[k];
+    const val=Number($('#'+id).value);
+    if(Number.isFinite(val)&&val>=0&&$('#'+id).value!=='')rates[k]=val;
+  });
+  const rateOverridesActive=['ocrOverride','gcrOverride','lprOverride','glnOverride'].some(id=>String($('#'+id)?.value??'').trim()!=='');
+  const rateTemperatureMode=$('#rateTemperatureMode')?.value||'reference_37c_q10';
+  const q10Factor={ocr:1,gcr:1,lpr:1,gln:1};
+  if(rateTemperatureMode==='reference_37c_q10'){
+    q10Factor.ocr=Math.pow(PHYS.Q10_OCR,(T-37)/10);
+    q10Factor.gcr=Math.pow(PHYS.Q10_GCR,(T-37)/10);
+    q10Factor.lpr=Math.pow(PHYS.Q10_LPR,(T-37)/10);
+    q10Factor.gln=Math.pow(PHYS.Q10_GLN,(T-37)/10);
+    rates.ocr*=q10Factor.ocr;
+    rates.gcr*=q10Factor.gcr;
+    rates.lpr*=q10Factor.lpr;
+    rates.gln*=q10Factor.gln;
+  }
+
+  const volume_nL=volumeFromSlider($('#volumeT').value);
+  const pop=quickPopulation(volume_nL);
+  const phases=phaseVolumes();
+  const totalEmulsion_uL=phases.Vemul_uL;
+  const Vaq_uL=phases.Vaq_uL;
+  const VoilEmul_uL=phases.VoilEmul_uL;
+  const residualOil_uL=phases.residualOil_uL;
+  const totalOil_uL=phases.totalOil_uL;
+  const liquidFill_uL=phases.liquid_uL;
+  const vessel=vesselSpec();
+  const vesselDiameter_mm=Math.max(.2,Number($('#vesselDiameter')?.value)||vessel.diameter_mm||6);
+  const tubingLength_mm=Math.max(1,Number($('#tubingLength')?.value)||vessel.length_mm||1000);
+  const tubingCrossSection_mm2=Math.PI*Math.pow(vesselDiameter_mm/2,2);
+  const vesselCapacity_uL=vessel.kind==='tubing'?tubingCrossSection_mm2*tubingLength_mm:(Number.isFinite(vessel.capacity_uL)?vessel.capacity_uL:null);
+  const filledTubingLength_mm=vessel.kind==='tubing'?Math.min(tubingLength_mm,liquidFill_uL/Math.max(1e-9,tubingCrossSection_mm2)):null;
+  const vesselArea_mm2=vessel.kind==='tubing'?Math.PI*vesselDiameter_mm*Math.max(0,filledTubingLength_mm||0):Math.PI*Math.pow(vesselDiameter_mm/2,2);
+  const emulsionDepth_mm=vessel.kind==='tubing'?vesselDiameter_mm/2:totalEmulsion_uL/Math.max(.001,vesselArea_mm2);
+  const residualOilDepth_mm=vessel.kind==='tubing'?0:residualOil_uL/Math.max(.001,vesselArea_mm2);
+  const O2eq=o2Eq(T,gas);
+  const airO2Eq=o2Eq(T,airGas);
+  const CO2eq=co2Eq(T,gas);
+  const pHBoundaryMode=$('#pHBoundaryMode')?.value||'fixed_starting_pH_boundary';
+  const pHModel=$('#pHModel')?.value||'carbonate_alkalinity';
+  const pH0Input=Number.isFinite(Number($('#pH0').value))?Number($('#pH0').value):7.4;
+  const CO2FromStartingPH=(sub.bicarb>0.5)?clamp(sub.bicarb/Math.pow(10,pH0Input-carbonateConstants(T).pKa1),0.001,200):CO2eq;
+  const CO2Initial=CO2FromStartingPH;
+  const CO2Boundary=(sub.bicarb>0.5?(pHBoundaryMode==='fixed_starting_pH_boundary'?CO2FromStartingPH:CO2eq):CO2eq);
+  let headspace_mL=($('#vesselPreset')?.value&&$('#vesselPreset').value!=='custom')?autoHeadspace_mL(vessel):Math.max(0,Number.isFinite(Number($('#headspaceVolume').value))?Number($('#headspaceVolume').value):0);
+  const invalid=[];
+  if(gas.custom&&gas.o2+gas.co2>1+1e-9)invalid.push(`Custom gas O₂ + CO₂ cannot exceed 100%; current total is ${fmt((gas.o2+gas.co2)*100,1)}%.`);
+  if(vessel.id!=='custom'&&Number.isFinite(vesselCapacity_uL)&&liquidFill_uL>vesselCapacity_uL)invalid.push(`Liquid fill ${fmt(liquidFill_uL/1000,3)} mL exceeds ${vessel.name} capacity ${fmt(vesselCapacity_uL/1000,3)} mL.`);
+  if(vessel.kind==='tubing'&&Number.isFinite(vesselCapacity_uL)&&liquidFill_uL>vesselCapacity_uL)invalid.push('Liquid fill exceeds PTFE tubing capacity; increase tubing length or reduce liquid volume.');
+  if(headspace_mL<0)headspace_mL=0;
+
+  const targetCellsInput=Number($('#targetCells').value);
+  const targetCells=Number.isFinite(targetCellsInput)?targetCellsInput:1;
+  const lambdaInput=Number($('#lambda').value);
+  const lambda=Number.isFinite(lambdaInput)?lambdaInput:0;
+  const targetProbability=poissonPMF(targetCells,lambda);
+  const occupancy=buildOccupancyModel(lambda,pop.N,targetCells);
+  const initHeadspaceO2Pct=clamp(Number.isFinite(Number($('#initHeadspaceO2Pct')?.value))?Number($('#initHeadspaceO2Pct')?.value):gas.o2*100,0,100);
+  const initHeadspaceCO2Pct=clamp(Number.isFinite(Number($('#initHeadspaceCO2Pct')?.value))?Number($('#initHeadspaceCO2Pct')?.value):gas.co2*100,0,100);
+  const thresholdMode=$('#o2ThresholdMode')?.value||'selected_pct';
+  const thresholdValue=Math.max(0,Number($('#hypoxiaPct').value)||0);
+  const rawInputs=captureRawInputs();
+  const p={
+    T,gas,cell,med,oil,rates,sub,buffer,warnings,invalid,
+    volume_nL,targetCells,lambda,targetProbability,N:pop.N,p0:pop.p0,p1:pop.p1,empty:pop.empty,single:pop.single,multi:pop.multi,
+    totalCells:occupancy.expectedTotalCells,bulkInitialCells:occupancy.expectedBulkCells,occupancy,occupiedDroplets:occupancy.occupiedDroplets,occupiedFraction:occupancy.occupiedFraction,
+    totalEmulsion_uL,Vaq_uL,VoilEmul_uL,residualOil_uL,totalOil_uL,liquidFill_uL,vessel,vesselCapacity_uL,tubingLength_mm,filledTubingLength_mm,
+    vesselDiameter_mm,vesselArea_mm2,emulsionDepth_mm,residualOilDepth_mm,
+    CO2Initial,CO2Boundary,pHBoundaryMode,pHModel,geometryMode:$('#geometryMode')?.value||'auto',modelTier:$('#modelTier')?.value||'heuristic',halfTimeMode:$('#halfTimeMode')?.value||'reference_scaled',rateTemperatureMode,q10Factor,
+    O2eq,airO2Eq,CO2eq,atmMode:$('#atmMode').value,headspace_mL,
+    initHeadspaceO2Pct,initHeadspaceCO2Pct,
+    headO2Initial:dryGasPctToHeadspaceMoles(initHeadspaceO2Pct,headspace_mL,T),
+    headCO2Initial:dryGasPctToHeadspaceMoles(initHeadspaceCO2Pct,headspace_mL,T),
+    gasHalf:Number($('#gasHalf').value)||60,oilHalf:Number($('#oilHalf').value)||60,dropHalf:Number($('#dropHalf').value)||10,
+    gradientFactor:Number($('#gradientFactor').value)||1,centerPenalty:Number($('#centerPenalty').value)||1,storageMode:$('#storageMode').value,bulkO2Mode:$('#bulkO2Mode')?.value||'auto',
+    surfaceAccess:clamp(Number($('#surfaceAccess').value)||0,0,100)/100,pH0:Number($('#pH0').value)||7.4,pHFloor:Number($('#pHFloor').value)||6.8,
+    pHCeiling:Number($('#pHCeiling').value)||7.65,o2ThresholdMode:thresholdMode,o2ThresholdValue:thresholdValue,
+    initAqO2Pct:clamp((Number.isFinite(Number($('#initAqO2Pct')?.value))?Number($('#initAqO2Pct')?.value):100),0,300),
+    initOilO2Pct:clamp((Number.isFinite(Number($('#initOilO2Pct')?.value))?Number($('#initOilO2Pct')?.value):100),0,300),
+    initReservoirO2Pct:clamp((Number.isFinite(Number($('#initReservoirO2Pct')?.value))?Number($('#initReservoirO2Pct')?.value):100),0,300),
+    glucoseFloor:Math.max(0,(Number.isFinite(Number($('#glucoseFloor')?.value))?Number($('#glucoseFloor')?.value):0.1)),
+    glutamineFloor:Math.max(0,(Number.isFinite(Number($('#glutamineFloor')?.value))?Number($('#glutamineFloor')?.value):0.05)),
+    prolif:$('#proliferation').value==='on',dt_h:Number.isFinite(Number($('#doublingTime').value))?Number($('#doublingTime').value):(cell.dt||24),lag_h:Number.isFinite(Number($('#lagPhase').value))?Number($('#lagPhase').value):(cell.lag||0),
+    logStep:Number.isFinite(Number($('#logStep').value))?Number($('#logStep').value):30,maxDays:Number.isFinite(Number($('#maxDays').value))?Number($('#maxDays').value):14,decimals:Number.isFinite(Number($('#decimals').value))?Number($('#decimals').value):4,
+    marginWarning:Number($('#marginWarning').value)||12,carryingCellsPerNL:Math.max(1,Number($('#carryingCapacity')?.value)||300),
+    pasteurThreshold_uM:Number.isFinite(Number($('#pasteurThreshold')?.value))?Math.max(0,Number($('#pasteurThreshold')?.value)):20,pasteurMax:clamp(Number($('#pasteurMax')?.value)||1.8,1,5),
+    o2Km_uM:Math.max(1e-6,Number($('#o2Km')?.value)||1),rq:Math.max(0,cell.rq||1),estimatedWorkload:null,
+    rateScenarioSource:{customCell:cell.id==='custom',overridesActive:rateOverridesActive},rawInputs
+  };
+  p.o2Threshold=thresholdFromMode(p.o2ThresholdValue,p.o2ThresholdMode,p.O2eq,p.airO2Eq);
+  p.initialO2T=p.airO2Eq*p.initAqO2Pct/100;
+  p.initialO2B=p.initialO2T;
+  p.initialO2Oil=p.airO2Eq*p.initOilO2Pct/100;
+  p.initialO2Res=p.airO2Eq*p.initReservoirO2Pct/100;
+  p.DICInitial=carbonateBaseline(p).dic0;
+  p.chartO2Reference=Math.max(1,p.airO2Eq,p.O2eq,p.initialO2T,p.initialO2Oil,p.initialO2Res,p.o2Threshold);
+  hardValidateInputs(p);
+  p.estimatedWorkload=estimateSolverWorkload(p);
+
+  if(p.pH0<=p.pHFloor)warn('danger','Initial pH is at or below the pH floor; the endpoint will occur immediately unless limits are changed.');
+  if(p.vessel.id!=='custom'&&Number.isFinite(p.vesselCapacity_uL)&&liquidFill_uL>p.vesselCapacity_uL)warn('danger','Invalid geometry: liquid fill exceeds selected vessel capacity. The simulation is blocked until this is corrected.');
+  if(residualOil_uL>totalEmulsion_uL)warn('warn','Excess reservoir oil is larger than the generated droplet emulsion. This is valid for an oil overlay or loop, but if you meant a single total-liquid volume, set excess oil to 0 and use aqueous fraction to define the oil inside the emulsion.');
+  if(p.gas.o2>.15&&p.gas.co2<.005&&p.sub.bicarb>5&&p.pHBoundaryMode!=='fixed_starting_pH_boundary')warn('warn','Ambient-air boundary with bicarbonate medium can drive strong pH drift when the selected-gas CO₂ boundary is active. Use 5% CO₂/air for bicarbonate-buffered incubations unless ambient exposure is intentional.');
+  if(p.sub.bicarb>5&&p.pHBoundaryMode==='fixed_starting_pH_boundary')warn('warn','Bicarbonate pH is using an explicit infinite CO₂ reservoir matched to the starting pH. This is not a closed-system carbon balance.');
+  configCompatibilityIssues(p).forEach(text=>warn('danger',text));
+  if(p.atmMode==='closed'&&p.headspace_mL<=1e-9)warn('warn','Closed mode has zero headspace volume, so gas exchange with a headspace compartment is disabled.');
+  if(p.targetCells>p.carryingCellsPerNL*p.volume_nL)warn('warn','Initial target-cell count exceeds the proliferation carrying-capacity estimate for this droplet volume.');
+  if(p.targetProbability<0.001)warn('warn',`The evaluated droplet occupancy is very rare under λ: P(K=${p.targetCells}) = ${fmt(p.targetProbability*100,4)}%. Treat this as a stress-test droplet, not a representative droplet.`);
+  else if(p.targetProbability<0.01)warn('warn',`The evaluated droplet occupancy is uncommon under λ: P(K=${p.targetCells}) = ${fmt(p.targetProbability*100,3)}%.`);
+  const rt=String(cell.rateTier||cell.evidenceTier||'').toUpperCase();
+  if(['B','C','D'].includes(rt))warn('warn',`Cell-line metabolic rates are rate tier ${rt}; run low/nominal/high measured-rate scenarios before quantitative use.`);
+  if(p.modelTier==='heuristic'&&p.pHModel==='heuristic_legacy')warn('warn','Both the pH and growth layers remain heuristic. Use measured exchange half-times and direct endpoint validation for release-critical experiments.');
+  else if(p.modelTier==='heuristic')warn('warn','Growth remains heuristic. The pH layer is using the carbonate/alkalinity solver with linear non-bicarbonate buffer alkalinity, not a full ionic-strength charge-balance medium model.');
+  if(p.modelTier==='measured_inputs'&&p.halfTimeMode==='reference_scaled')warn('warn','Measured-input interpretation is active, but exchange half-times are still being treated as geometry-scaled reference values. Switch half-time interpretation to "effective measured" if your entered half-times already match this exact configuration.');
+  if(p.halfTimeMode==='measured_effective')warn('ok','Exchange half-times are being applied directly for the current configuration with no automatic geometry rescaling.');
+  if(p.rateTemperatureMode==='measured_selected_temperature')warn('ok','Custom and override rates are being used as already measured at the selected temperature; no Q10 correction is applied.');
+  if(p.atmMode==='closed'&&p.headO2Initial>0){
+    const oilDemand=(VoilEmul_uL+residualOil_uL)*1000*oil.capacityRatio*Math.max(p.initialO2Oil,p.O2eq);
+    if(oilDemand>p.headO2Initial*2)warn('warn','Closed headspace oxygen is small relative to the oil oxygen capacity; oil equilibration can rapidly shift headspace pO₂.');
+  }
+  if(p.sub.bicarb>0.5){
+    const initialBoundaryCO2=p.pHBoundaryMode==='fixed_starting_pH_boundary'?p.CO2Boundary:(p.pHBoundaryMode==='closed_headspace_mass_balance'?co2HeadEq({headCO2:p.headCO2Initial},p):p.CO2eq);
+    const pHEq=p.pHModel==='carbonate_alkalinity'?boundaryEquilibriumPH(initialBoundaryCO2,p):(carbonateConstants(p.T).pKa1+Math.log10(Math.max(.05,p.sub.bicarb)/Math.max(.001,initialBoundaryCO2)));
+    if(Math.abs(pHEq-p.pH0)>0.15)warn('warn',`Starting pH ${fmt(p.pH0,2)} is inconsistent with the ${p.pHModel==='carbonate_alkalinity'?'carbonate/alkalinity':'simplified bicarbonate'} equilibrium for the selected gas by about ${fmt(Math.abs(pHEq-p.pH0),2)} pH units. The run begins from a nonequilibrium state.`);
+  }
+  if(p.O2eq<5)warn('warn','Selected boundary gas is effectively anoxic. Initial liquid and closed-headspace oxygen are entered independently and may still start above zero.');
+  if(p.estimatedWorkload.estimatedSteps>500000)warn('warn',`Estimated solver workload is high at about ${fmt(p.estimatedWorkload.estimatedSteps,0)} accepted sub-steps. Auto-rerun is disabled for this configuration; use Calculate explicitly.`);
+  p.parameterProvenance=buildParameterProvenance(p);
+  return p;
+}
+function renderScenarioTable(result){
+  const rows=(result&&result.rateScenarios)||[];
+  if(!rows.length){$('#scenarioTable tbody').innerHTML='<tr><td colspan="5">Run a calculation to populate deterministic rate scenarios.</td></tr>'; return;}
+  const body=rows.map(row=>`<tr><td>${row.label}${row.available?'':' *'}</td><td>${row.limiter==='simulation horizon'?'≥ '+hoursLabel(result.params.maxDays*24):hoursLabel(row.safeMin/60)}</td><td>${row.limiter}</td><td>${fmt(row.final.O2T,3)} µM</td><td>${fmt(row.final.pH,3)}</td></tr>`).join('');
+  const note=rows.some(row=>!row.available)?'<tr><td colspan="5">* Stored low/high bounds were unavailable for at least one scenario, so the current effective rates were reused.</td></tr>':'';
+  $('#scenarioTable tbody').innerHTML=body+note;
+}
+function renderCalibrationResult(result){
+  window.lastCalibration=result||null;
+  if(window.lastResult)window.lastResult.calibration=result||null;
+  if(!result){$('#calibrationSummary').textContent='Paste a measured O₂ series and run calibration to fit transport half-times for the current setup.'; $('#calibrationTable tbody').innerHTML='<tr><td colspan="4">Run calibration to populate residuals.</td></tr>'; return;}
+  const keyText=result.parameterKeys.map(key=>`${key} ${fmt(result.bestFit[key],3)} min`).join(' · ');
+  const intervalText=result.parameterKeys.map(key=>{const it=result.intervals[key]; return `${key} profile range ${fmt(it.low,3)}–${fmt(it.high,3)} min`;}).join(' · ');
+  const corrText=result.correlation==null?'single-parameter fit':`likelihood-weighted local correlation ${fmt(result.correlation,3)}`;
+  const warnings=(result.identifiabilityWarnings||[]).map(text=>`<div class="notice warn">${text}</div>`).join('');
+  $('#calibrationSummary').innerHTML=`<div><strong>Best fit:</strong> ${keyText}. <strong>RMSE:</strong> ${fmt(result.rmse,3)} µM across ${fmt(result.sampleCount,0)} points. <strong>Observable:</strong> ${result.observableLabel}. <strong>Conditions match current setup:</strong> ${result.predictionConditionsMatchCurrentSetup?'yes':'no'}.</div><div style="margin-top:6px">${intervalText}. ${corrText}.</div>${warnings}`;
+  $('#calibrationTable tbody').innerHTML=result.residuals.map(row=>`<tr><td>${fmt(row.time_h,3)} h</td><td>${fmt(row.observed,3)}</td><td>${fmt(row.predicted,3)}</td><td>${fmt(row.residual,3)}</td></tr>`).join('');
+}
 function completeRunResult(r){window.lastResult=r; if(r.error){renderSolverError(r); saveState(); return;} renderResult(r); drawChart(r); saveState();}
 function runAndRenderSync(p){const r=Engine.simulate(p); r.rateScenarios=buildRateScenarioResults(p); completeRunResult(r);}
 function runAndRender(){
