@@ -5,7 +5,7 @@ The Metabolic Depletion Forecaster estimates how long cells may remain in a drop
 The result should be read as a **planning estimate**, not as a guaranteed incubation limit. Real cultures vary with passage number, medium, serum, oxygen tension, pH, cell density, adaptation state, and the actual gas-exchange geometry of the device.
 
 Audited release:
-`v18-transport-20260715`
+`v19-html-authoritative-20260716`
 
 ## What is corrected in this release
 

@@ -3,7 +3,7 @@
 Browser-based calculator for estimating useful incubation windows in droplet emulsions and small-volume culture formats.
 
 Current release status:
-`v18-transport-20260715`
+`v19-html-authoritative-20260716`
 
 - Conserved O₂ and tracked CO₂ are solved in amount space for closed systems.
 - Finite exchange now uses the entered half-time as the actual concentration-difference half-time for finite pairs, with a simultaneous conservative solve across the coupled exchange network.

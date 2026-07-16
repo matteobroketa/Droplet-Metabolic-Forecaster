@@ -338,13 +338,13 @@ function withMockDom(values, fn) {
     else el.value = config;
   }
   global.document = {
-    body: { dataset: { release: 'v18-transport-20260715' } },
+    body: { dataset: { release: 'v19-html-authoritative-20260716' } },
     getElementById(id) {
       return elements.get(id) || ensure(id);
     },
     querySelector(selector) {
       if (selector.startsWith('#')) return elements.get(selector.slice(1)) || ensure(selector.slice(1));
-      if (selector === 'meta[name="artifact-release"]') return { content: 'v18-transport-20260715' };
+      if (selector === 'meta[name="artifact-release"]') return { content: 'v19-html-authoritative-20260716' };
       if (selector === 'meta[name="artifact-commit"]') return { content: 'd4032d9863245a89b4113788fed2cea33372da1f' };
       if (selector === 'meta[name="artifact-manifest-sha256"]') return { content: '0F565D0469D0C76F51DC31EF5C39D6EC57B6AF1A1B4D16F721C5254BF4A1E1A5' };
       const labelMatch = selector.match(/^label\[for="(.+)"\]$/);
@@ -1043,12 +1043,12 @@ run('negative additive quantity is rejected', () => {
 });
 
 run('public release identity is consistent', () => {
-  const release = 'v18-transport-20260715';
+  const release = 'v19-html-authoritative-20260716';
   assert(html.includes(`release: ${release}`), 'artifact comment release mismatch');
   assert(html.includes(`data-release="${release}"`), 'body release mismatch');
   assert(html.includes(`content="${release}"`), 'meta release mismatch');
-  assert(html.includes('Metabolic Depletion Forecaster v18'), 'title release mismatch');
-  assert.strictEqual(STATE_KEY, 'metabolic-forecaster-v18-transport-20260715', 'state key mismatch');
+  assert(html.includes('Metabolic Depletion Forecaster v19'), 'title release mismatch');
+  assert.strictEqual(STATE_KEY, 'metabolic-forecaster-v19-html-authoritative-20260716', 'state key mismatch');
   assert(readme.includes(release), 'README release mismatch');
   assert(limitations.includes(release), 'limitations release mismatch');
   assert(!html.includes('v17-audit-20260715'), 'old release identity still present');
@@ -1807,7 +1807,7 @@ run('JSON export payload includes reproducibility metadata and conductances', ()
     r.rateScenarios = buildRateScenarioResults(p);
     r.calibration = { fitMode: 'dropHalf', bestFit: { dropHalf: 10 } };
     const payload = buildExportPayload(r);
-    assert.strictEqual(payload.release, 'v18-transport-20260715', 'export release mismatch');
+    assert.strictEqual(payload.release, 'v19-html-authoritative-20260716', 'export release mismatch');
     assert.strictEqual(payload.artifactCommit, 'd4032d9863245a89b4113788fed2cea33372da1f', 'export artifact commit mismatch');
     assert(payload.auditManifestSha256 && payload.auditManifestSha256.length === 64, 'export manifest hash missing');
     assert(payload.rawInputs && payload.rawInputs.cellLine === 'test_cell', 'raw input snapshot missing');

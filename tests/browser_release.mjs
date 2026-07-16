@@ -1,8 +1,8 @@
 import path from 'node:path';
 import { chromium, firefox, webkit } from 'playwright';
 
-const RELEASE = 'v18-transport-20260715';
-const STATE_KEY = 'metabolic-forecaster-v18-transport-20260715';
+const RELEASE = 'v19-html-authoritative-20260716';
+const STATE_KEY = 'metabolic-forecaster-v19-html-authoritative-20260716';
 const LEGACY_STATE_KEY = 'metabolic-forecaster-v17-audit-20260715';
 const artifactPath = path.resolve('metabolic_depletion_forecaster.html').replace(/\\/g, '/');
 const url = `file:///${artifactPath}`;
@@ -280,7 +280,7 @@ const downloads = await page.evaluate(() => window.__downloads.map((entry) => ({
 const csvDownload = downloads.find((entry) => entry.name === 'metabolic_depletion_forecaster_log.csv');
 const jsonDownload = downloads.find((entry) => entry.name === 'metabolic_depletion_forecaster_result.json');
 assert(csvDownload && csvDownload.text && csvDownload.text.includes('time_h,target_o2_uM'), 'CSV export content missing');
-assert(jsonDownload && jsonDownload.text && jsonDownload.text.includes('"release": "v18-transport-20260715"'), 'JSON export content missing');
+assert(jsonDownload && jsonDownload.text && jsonDownload.text.includes('"release": "v19-html-authoritative-20260716"'), 'JSON export content missing');
 assert(jsonDownload && jsonDownload.text && jsonDownload.text.includes('"growthModel": "stress_limited"'), 'JSON export should include growth model metadata');
 assert(jsonDownload && jsonDownload.text && jsonDownload.text.includes('"groupedBulkNutrients"'), 'JSON export should include grouped bulk nutrient summaries');
 

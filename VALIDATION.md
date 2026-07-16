@@ -1,6 +1,6 @@
 # Validation
 
-Release: `v18-transport-20260715`
+Release: `v19-html-authoritative-20260716`
 
 ## Automated checks
 
