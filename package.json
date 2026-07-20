@@ -13,6 +13,7 @@
     "verify:artifact": "node scripts/verify_artifact.js",
     "verify:data": "node scripts/verify_model_data_bundle.js",
     "verify:manifest": "node scripts/verify_manifest.js",
+    "regenerate:manifest": "node scripts/regenerate_manifest.js",
     "verify:provenance": "node scripts/verify_parameter_provenance.js",
     "verify:html-is-canonical": "node scripts/verify_html_is_canonical.js"
   },

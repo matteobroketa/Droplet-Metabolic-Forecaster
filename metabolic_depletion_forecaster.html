@@ -6,12 +6,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Metabolic Depletion Forecaster v19</title>
 <meta name="artifact-release" content="v19-html-authoritative-20260716" />
-<meta name="artifact-commit" content="a24c42d2a0809fcbe15591ffd3eacf7cfd81ecc8" />
-<meta name="artifact-source-commit" content="a24c42d2a0809fcbe15591ffd3eacf7cfd81ecc8" />
+<meta name="artifact-commit" content="750d2ffe09b9f6af77e649710c96fd28522e2f1d" />
+<meta name="artifact-source-commit" content="750d2ffe09b9f6af77e649710c96fd28522e2f1d" />
 <meta name="artifact-release-commit" content="represented-by-containing-git-commit" />
 <meta name="artifact-sha256" content="recorded-in-AUDIT_MANIFEST.json" />
 <meta name="artifact-manifest-version" content="2" />
-<meta name="artifact-manifest-sha256" content="98A35B01B2C7234EB49A35D3AAF668CAAF92F3D1C0F35C3CEFFD8900192083C8" />
+<meta name="artifact-manifest-sha256" content="3E0FD4AD7F3A85DFAE632E218510E2DDE465DF88FBF7BF74896B8F1EE66B3C0E" />
 <meta name="description" content="Forecast oxygen, nutrient, and pH limits in droplet emulsions and small-volume cultures." />
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%232563eb'/%3E%3Cstop offset='1' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='18' fill='%2308111f'/%3E%3Ccircle cx='24' cy='32' r='12' fill='url(%23g)'/%3E%3Ccircle cx='42' cy='25' r='7' fill='%238b5cf6'/%3E%3Ccircle cx='42' cy='41' r='5' fill='%2306b6d4'/%3E%3Cpath d='M15 50c10-8 27-8 38 0' fill='none' stroke='white' stroke-width='4' stroke-linecap='round' opacity='.9'/%3E%3C/svg%3E" />
 <style>
@@ -1348,15 +1348,18 @@ function advanceStep(prev,dt,p,caps,kin){
   const pasteur=oxygenStress(s.O2T,p);
   const singlePasteur=oxygenStress(s.O2Single,p);
   const multiPasteur=oxygenStress(s.O2Multi,p);
+  const metabolicT=metabolicStressFactor({o2:s.O2T,glc:s.Glc,gln:s.Gln,lac:s.Lac,pH:s.pH,initialO2:p.initialO2T,initialGlc:p.sub.glc,initialGln:p.sub.gln,initialLac:p.sub.lac},p);
+  const metabolicSingle=metabolicStressFactor({o2:s.O2Single,glc:s.GlcSingle,gln:s.GlnSingle,lac:s.LacSingle,pH:s.pHSingle,initialO2:p.initialO2B,initialGlc:p.sub.glc,initialGln:p.sub.gln,initialLac:p.sub.lac},p);
+  const metabolicMulti=metabolicStressFactor({o2:s.O2Multi,glc:s.GlcMulti,gln:s.GlnMulti,lac:s.LacMulti,pH:s.pHMulti,initialO2:p.initialO2B,initialGlc:p.sub.glc,initialGln:p.sub.gln,initialLac:p.sub.lac},p);
   const concDen=Math.max(1e-9,caps.capT*1000);
   const singleDen=Math.max(1e-9,caps.capSingle*1000);
   const multiDen=Math.max(1e-9,caps.capMulti*1000);
   const take=(intended,available)=>Math.min(Math.max(0,intended),Math.max(0,available));
-  const glcIntentT=s.nT*p.rates.gcr*pasteur*dt, glcIntentSingle=s.nSingle*p.rates.gcr*singlePasteur*dt, glcIntentMulti=s.nMulti*p.rates.gcr*multiPasteur*dt;
-  const glnIntentT=s.nT*p.rates.gln*(1+.15*(pasteur-1))*dt, glnIntentSingle=s.nSingle*p.rates.gln*(1+.15*(singlePasteur-1))*dt, glnIntentMulti=s.nMulti*p.rates.gln*(1+.15*(multiPasteur-1))*dt;
+  const glcIntentT=s.nT*p.rates.gcr*pasteur*metabolicT*dt, glcIntentSingle=s.nSingle*p.rates.gcr*singlePasteur*metabolicSingle*dt, glcIntentMulti=s.nMulti*p.rates.gcr*multiPasteur*metabolicMulti*dt;
+  const glnIntentT=s.nT*p.rates.gln*(1+.15*(pasteur-1))*metabolicT*dt, glnIntentSingle=s.nSingle*p.rates.gln*(1+.15*(singlePasteur-1))*metabolicSingle*dt, glnIntentMulti=s.nMulti*p.rates.gln*(1+.15*(multiPasteur-1))*metabolicMulti*dt;
   const glcT=take(glcIntentT,s.Glc*concDen), glcSingle=take(glcIntentSingle,s.GlcSingle*singleDen), glcMulti=take(glcIntentMulti,s.GlcMulti*multiDen);
   const glnT=take(glnIntentT,s.Gln*concDen), glnSingle=take(glnIntentSingle,s.GlnSingle*singleDen), glnMulti=take(glnIntentMulti,s.GlnMulti*multiDen);
-  const lacIntentT=s.nT*p.rates.lpr*pasteur*dt, lacIntentSingle=s.nSingle*p.rates.lpr*singlePasteur*dt, lacIntentMulti=s.nMulti*p.rates.lpr*multiPasteur*dt;
+  const lacIntentT=s.nT*p.rates.lpr*pasteur*metabolicT*dt, lacIntentSingle=s.nSingle*p.rates.lpr*singlePasteur*metabolicSingle*dt, lacIntentMulti=s.nMulti*p.rates.lpr*multiPasteur*metabolicMulti*dt;
   const lacT=lacIntentT*(glcIntentT>0?glcT/glcIntentT:1), lacSingle=lacIntentSingle*(glcIntentSingle>0?glcSingle/glcIntentSingle:1), lacMulti=lacIntentMulti*(glcIntentMulti>0?glcMulti/glcIntentMulti:1);
   const glucoseConsumed=glcT+glcSingle+glcMulti, glutamineConsumed=glnT+glnSingle+glnMulti, lactateProduced=lacT+lacSingle+lacMulti;
   const glcRaw=s.Glc-glcT/concDen, glnRaw=s.Gln-glnT/concDen;
@@ -1569,6 +1572,7 @@ function captureRawInputs(){
 function activeAdditiveSelections(){
   return Object.values(DATA.additives||{}).filter(a=>$(`#add_${a.id}`)?.checked).map(a=>({id:a.id,name:a.name,quantity:Number($(`#qty_${a.id}`)?.value)||0}));
 }
+function metabolicStressFactor(local,p){return p.prolif&&(p.growthModel||'stress_limited')==='stress_limited'?growthStressFactor(local,p):1;}
 function structuredRateProvenance(cell){const proxy=['B','C','D'].includes(String(cell?.rateTier||cell?.evidenceTier||'').toUpperCase());const source=cell?.rateRefs||cell?.refs||[];const condition='Not fully reported in the embedded default; confirm passage, density, medium, serum, exposure time, temperature, and gas conditions against the cited source.';return {classification:cell?.id==='custom'?'direct user-entered':'embedded '+(proxy?'family proxy':'literature default'),proxyFamily:proxy,source,units:'fmol cell⁻¹ min⁻¹',conversion:{canonicalUnit:'fmol cell⁻¹ min⁻¹',equation:'reported rate converted to fmol cell⁻¹ min⁻¹ where necessary; no temperature, serum, additive, or Warburg multiplier is applied'},experimentalConditions:{temperatureC:37,medium:cell?.recommendedMedium||'not consistently reported',serum:'not consistently reported',cellDensity:'not consistently reported',exposureTime:'not consistently reported',gas:'not consistently reported',notes:condition},rates:{ocr:cell?.ocr??null,gcr:cell?.gcr??null,lpr:cell?.lpr??null,gln:cell?.gln??null}};}
 function buildParameterProvenance(p){
   return {
