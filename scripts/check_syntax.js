@@ -51,4 +51,7 @@ for (const filePath of nodeFiles) {
 checkArtifactInlineScript(path.join(root, 'metabolic_depletion_forecaster.html'));
 checked.push('metabolic_depletion_forecaster.html<script>');
 
+execFileSync(process.execPath, [path.join(root, 'scripts', 'check_duplicate_functions.js')], { cwd: root, stdio: 'pipe' });
+checked.push('duplicate-function-declarations');
+
 console.log(`Syntax verification passed for ${checked.length} target(s).`);

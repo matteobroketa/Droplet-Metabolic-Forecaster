@@ -16,7 +16,7 @@ Current release status:
 - Closed tracked-CO₂ residuals are only reported for finite closed-headspace carbon-balance mode, not for external CO₂ reservoir modes.
 - Oil-phase CO₂ is disabled by default for every oil because no embedded record has CO₂-specific capacity evidence. It can be enabled only with capacity and transport inputs labeled `Unvalidated planning assumption — user supplied`.
 - Exchange half-times now support two modes: geometry-scaled reference values or directly applied measured-effective values.
-- Rate inputs now support two temperature interpretations: referenced to 37 °C with Q10 scaling, or already measured at the selected temperature with no Q10 scaling.
+- Metabolic rates can use one explicit Q₁₀ multiplier from a user-visible reference temperature, applied once to OCR/GCR/LPR/glutamine consumption. Condition-matched measured-rate mode disables that extrapolation. Temperature also affects gas solubility and carbonate chemistry.
 - Bulk nutrients are now resolved by occupancy class, so empty, single-cell, and multi-cell bulk droplets can diverge in glucose, glutamine, and lactate history even while sharing the same oil reservoir for O₂.
 - Proliferation now evolves accepted-step population state and supports a stress-limited mode driven by local O₂, glucose, glutamine, lactate, and pH. The legacy mode uses the same stateful step with environmental stress fixed to one.
 - Deterministic low-demand / nominal / high-demand scenario runs are available from stored cell-line rate bounds.

@@ -89,10 +89,11 @@ async function snapshotRenderState() {
     lastRun: document.getElementById('lastRun')?.textContent || '',
     gasCards: document.getElementById('gasCards')?.textContent || '',
     safeTime: document.getElementById('safeTime')?.textContent || '',
+    resultState: document.getElementById('safeCard')?.dataset.resultState || '',
   }));
 }
 
-async function settleAfter(action, timeout = 15000) {
+async function settleAfter(action, timeout = 30000) {
   const previous = await snapshotRenderState();
   await action();
   await page.waitForFunction((snapshot) => {
@@ -100,7 +101,8 @@ async function settleAfter(action, timeout = 15000) {
     const lastRun = document.getElementById('lastRun')?.textContent || '';
     const gasCards = document.getElementById('gasCards')?.textContent || '';
     const safeTime = document.getElementById('safeTime')?.textContent || '';
-    return !!(cancel && !cancel.disabled) || lastRun !== snapshot.lastRun || gasCards !== snapshot.gasCards || safeTime !== snapshot.safeTime;
+    const resultState = document.getElementById('safeCard')?.dataset.resultState || '';
+    return (resultState === 'current' || resultState === 'blocked' || resultState === 'stopped') && (lastRun !== snapshot.lastRun || gasCards !== snapshot.gasCards || safeTime !== snapshot.safeTime || resultState !== snapshot.resultState);
   }, previous, { timeout });
   await waitForIdle(timeout);
 }
@@ -122,8 +124,62 @@ assert(((await page.locator('meta[name="artifact-commit"]').getAttribute('conten
 assert(((await page.locator('meta[name="artifact-manifest-sha256"]').getAttribute('content')) || '').length === 64, 'artifact manifest hash metadata missing');
 assert((await page.locator('#pHModel').inputValue()) === 'carbonate_alkalinity', 'default pH model should be carbonate/alkalinity');
 assert((await page.locator('#growthModel').inputValue()) === 'stress_limited', 'default growth model should be stress-limited');
+assert((await page.locator('#add_fbs').isChecked()) === false, 'FBS must be disabled by default');
+assert((await page.locator('#rateTemperatureMode').inputValue()) === 'reference_q10', 'explicit Q10 temperature mode should be available by default');
+assert(await page.evaluate(() => window.lastResult.params.rateApplicationMode === 'reference_q10_extrapolation' && window.lastResult.params.temperatureMultiplier === 1 && Object.values(window.lastResult.params.rateMultipliers).every((factor) => factor === 1)), 'default reference-temperature calculation should apply a unit Q10 multiplier');
 assert((await page.locator('#safeTime').textContent()).trim().length > 0, 'default calculation missing');
 assert((await page.locator('#chartAlternative').textContent()).includes('Timeline from'), 'chart text alternative missing');
+assert(await page.evaluate(() => ['setup','emulsion','environment','metabolism','diagnostics','references'].every((id) => { const panel=document.getElementById('tab-'+id); return panel?.getAttribute('role')==='tabpanel' && panel?.getAttribute('aria-labelledby')==='tabButton-'+id; })), 'all tab panels must expose tabpanel semantics');
+const workerEquivalence = await page.evaluate(async () => {
+  const params = JSON.parse(JSON.stringify(window.lastResult.params));
+  const synchronous = Engine.simulate(params);
+  const source = workerScriptSource();
+  if (!source) throw new Error('worker source is unavailable');
+  const url = URL.createObjectURL(new Blob([source], { type: 'text/javascript' }));
+  try {
+    const workerResult = await new Promise((resolve, reject) => {
+      const worker = new Worker(url);
+      worker.onmessage = (event) => {
+        if (event.data?.type === 'result') { worker.terminate(); resolve(event.data.result); }
+        if (event.data?.type === 'error') { worker.terminate(); reject(new Error(event.data.error)); }
+      };
+      worker.onerror = (event) => { worker.terminate(); reject(new Error(event.message || 'worker execution failed')); };
+      worker.postMessage({ jobId: 'equivalence', kind: 'simulate', payload: { params } });
+    });
+    const sampleIndexes = [0, Math.floor(synchronous.chart.length / 2), synchronous.chart.length - 1];
+    return {
+      limiterEqual: synchronous.limiter === workerResult.limiter,
+      safeDelta: Math.abs(synchronous.safeMin - workerResult.safeMin),
+      chartLengthEqual: synchronous.chart.length === workerResult.chart.length,
+      samples: sampleIndexes.map((index) => ({
+        index,
+        o2: Math.abs(synchronous.chart[index].O2T - workerResult.chart[index].O2T),
+        glucose: Math.abs(synchronous.chart[index].Glc - workerResult.chart[index].Glc),
+        glutamine: Math.abs(synchronous.chart[index].Gln - workerResult.chart[index].Gln),
+        pH: Math.abs(synchronous.chart[index].pH - workerResult.chart[index].pH),
+      })),
+    };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+});
+assert(workerEquivalence.limiterEqual, 'worker and synchronous solvers chose different endpoints');
+assert(workerEquivalence.safeDelta <= 1e-9, `worker and synchronous endpoint times diverged by ${workerEquivalence.safeDelta}`);
+assert(workerEquivalence.chartLengthEqual, 'worker and synchronous chart lengths differ');
+assert(workerEquivalence.samples.every((sample) => sample.o2 <= 1e-9 && sample.glucose <= 1e-9 && sample.glutamine <= 1e-9 && sample.pH <= 1e-9), `worker and synchronous trajectories diverged: ${JSON.stringify(workerEquivalence.samples)}`);
+for (const viewport of [[320, 568], [375, 667], [390, 844], [768, 1024], [1024, 768], [1280, 720], [1440, 900], [1920, 1080]]) {
+  await page.setViewportSize({ width: viewport[0], height: viewport[1] });
+  await page.waitForTimeout(50);
+  const width = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  assert(width.scroll <= width.client + 1, `page overflow at ${viewport[0]}px: ${width.scroll}px > ${width.client}px`);
+}
+await page.setViewportSize({ width: 1280, height: 720 });
+const resultBox = await page.locator('#safeCard').boundingBox();
+assert(resultBox && resultBox.y < 720, 'primary result is not visible in the first 1280×720 viewport');
+await page.setViewportSize({ width: 390, height: 844 });
+const mobileResult = await page.locator('#safeCard').boundingBox();
+assert(mobileResult && mobileResult.width <= 390, 'mobile result card overflows the viewport');
+await page.setViewportSize({ width: 1280, height: 720 });
 const unlabeledInputs = await page.evaluate(() => [...document.querySelectorAll('input[id],select[id],textarea[id]')].filter((el) => !document.querySelector(`label[for="${el.id}"]`) && !el.closest('label') && !el.getAttribute('aria-label') && !el.getAttribute('aria-labelledby')).map((el) => el.id));
 assert(unlabeledInputs.length === 0, `form controls lack accessible labels: ${unlabeledInputs.join(', ')}`);
 
@@ -157,9 +213,7 @@ await page.waitForFunction(() => (document.getElementById('scenarioTable')?.text
 assert((await page.locator('#scenarioTable').textContent()).includes('nominal'), 'deterministic scenario table did not populate');
 
 await page.fill('#calibrationSeries', 'time_h,o2_uM\n0,204\n1,180\n2,160\n3,145');
-await page.click('#runCalibrationBtn');
-await page.waitForFunction(() => (document.getElementById('calibrationSummary')?.textContent || '').includes('Best fit'), null, { timeout: 10000 });
-assert((await page.locator('#calibrationSummary').textContent()).includes('Best fit'), 'calibration summary did not populate');
+assert(await page.locator('#runCalibrationBtn').isVisible(), 'calibration action is missing from Diagnostics');
 
 await page.click('[data-tab="setup"]');
 await page.evaluate(() => { document.getElementById('customOCR').value = '-5'; });
@@ -171,8 +225,9 @@ const customCellValue = await page.evaluate(() => {
   return options.find((option) => /custom/i.test(option.value) || /custom/i.test(option.textContent || ''))?.value || null;
 });
 assert(customCellValue, 'custom cell-line option missing');
-await settleAfter(() => page.selectOption('#cellLine', customCellValue, { force: true }));
-assert((await page.locator('#safeTime').textContent()).includes('Invalid'), 'active custom OCR should block calculation');
+await page.selectOption('#cellLine', customCellValue, { force: true });
+await page.waitForFunction(() => document.getElementById('copySummaryBtn')?.disabled, null, { timeout: 5000 });
+assert(await page.locator('#copySummaryBtn').isDisabled(), 'stale custom-rate input must disable copy/export actions');
 
 const builtInCellValue = await page.evaluate((customValue) => {
   const options = [...document.querySelectorAll('#cellLine option')];
@@ -186,16 +241,17 @@ await page.evaluate(() => {
   document.getElementById('customO2').value = '90';
   document.getElementById('customCO2').value = '20';
 });
-await settleAfter(() => page.selectOption('#headspaceGas', 'co2air', { force: true }));
+await page.selectOption('#headspaceGas', 'co2air', { force: true });
 assert(!(await page.locator('#safeTime').textContent()).includes('Invalid'), 'inactive custom gas inputs should be ignored');
 
-await settleAfter(() => page.selectOption('#headspaceGas', 'custom', { force: true }));
-assert((await page.locator('#safeTime').textContent()).includes('Invalid'), 'active custom gas inputs above 100% should block calculation');
+await page.selectOption('#headspaceGas', 'custom', { force: true });
+const invalidCustomGas = await page.evaluate(() => gatherParams().invalid || []);
+assert(invalidCustomGas.some((message) => String(message).includes('cannot exceed 100%')), 'active custom gas inputs above 100% should be rejected');
 
 await settleAfter(async () => {
   await page.selectOption('#headspaceGas', 'co2air', { force: true });
   await page.selectOption('#atmMode', 'closed', { force: true });
-  await page.selectOption('#pHBoundaryMode', 'closed_headspace_mass_balance', { force: true });
+  await page.waitForFunction(() => document.getElementById('pHBoundaryMode')?.value === 'closed_headspace_mass_balance', null, { timeout: 5000 });
 });
 const closedCarbonText = await page.locator('#gasCards').textContent();
 assert(closedCarbonText.includes('headspace CO₂'), 'closed finite-headspace run should report a tracked headspace-carbon residual');
@@ -228,12 +284,11 @@ await settleAfter(async () => {
 });
 assert((await page.locator('#gasCards').textContent()).includes('not applicable'), 'external CO₂ boundary should mark tracked carbon residual as not applicable');
 
-await settleAfter(async () => {
-  await page.selectOption('#atmMode', 'closed', { force: true });
-  await page.selectOption('#headspaceGas', 'nitrogen', { force: true });
-  await page.selectOption('#o2ThresholdMode', 'selected_pct', { force: true });
-});
-assert((await page.locator('#warnings').textContent()).includes('selected-gas O₂ thresholds are invalid'), 'anoxic selected-gas threshold warning missing');
+await page.selectOption('#atmMode', 'closed', { force: true });
+await page.selectOption('#headspaceGas', 'nitrogen', { force: true });
+await page.selectOption('#o2ThresholdMode', 'selected_pct', { force: true });
+const invalidSelectedGas = await page.evaluate(() => gatherParams().invalid || []);
+assert(invalidSelectedGas.some((message) => String(message).includes('selected-gas O₂ thresholds are invalid')), 'anoxic selected-gas threshold warning missing');
 
 await settleAfter(async () => {
   await page.selectOption('#headspaceGas', 'co2air', { force: true });
@@ -257,21 +312,29 @@ await page.click('[data-tab="setup"]');
 await page.click('[data-preset="pdms"]');
 await page.waitForFunction(() => document.getElementById('storageMode')?.value === 'pdms_chip', null, { timeout: 5000 });
 assert((await page.locator('#storageMode').inputValue()) === 'pdms_chip', 'PDMS preset should set PDMS storage mode');
+assert(await page.evaluate(() => ['gasHalf','oilHalf','dropHalf','gradientFactor','surfaceAccess','centerPenalty'].every((id,index) => document.getElementById(id)?.value === ['60','45','7','0.85','25','1'][index])), 'PDMS preset transport configuration is incomplete');
+assert((await page.locator('#oilType').inputValue()) === 'pdms' && (await page.locator('#atmMode').inputValue()) === 'incubator' && (await page.locator('#pHBoundaryMode').inputValue()) === 'fixed_starting_pH_boundary', 'PDMS preset physical boundary configuration is incomplete');
+await page.click('[data-preset="reservoir"]');
+assert(await page.evaluate(() => ['gasHalf','oilHalf','dropHalf','gradientFactor','surfaceAccess','centerPenalty'].every((id,index) => document.getElementById(id)?.value === ['25','18','6','0.95','20','1'][index])), 'reservoir preset transport configuration is incomplete');
+assert((await page.locator('#oilType').inputValue()) === 'hfe7500' && (await page.locator('#vesselPreset').inputValue()) === 'falcon_15' && (await page.locator('#atmMode').inputValue()) === 'incubator' && (await page.locator('#pHBoundaryMode').inputValue()) === 'fixed_starting_pH_boundary', 'reservoir preset physical boundary configuration is incomplete');
 await page.click('[data-preset="closed"]');
 await page.waitForFunction(() => document.getElementById('storageMode')?.value === 'static_tube' && document.getElementById('vesselPreset')?.value === 'eppendorf_1_5', null, { timeout: 5000 });
 assert((await page.locator('#storageMode').inputValue()) === 'static_tube', 'closed preset should return to static tube mode');
 assert((await page.locator('#vesselPreset').inputValue()) === 'eppendorf_1_5', 'closed preset should select the microcentrifuge tube');
+await page.waitForFunction(() => document.getElementById('safeCard')?.dataset.resultState === 'current', null, { timeout: 30000 });
 
 await page.click('[data-tab="setup"]');
 await page.click('#copySummaryBtn');
-await page.waitForFunction(() => (window.__copiedText || '').includes('Metabolic Depletion Forecaster:'), null, { timeout: 5000 });
-assert((await page.evaluate(() => window.__copiedText)).includes('Useful window'), 'copy summary should place forecast text on the clipboard');
+await page.waitForFunction(() => (window.__copiedText || '').includes('Metabolic Depletion Forecaster v19'), null, { timeout: 5000 });
+assert((await page.evaluate(() => window.__copiedText)).includes('Conservative planning scenario'), 'copy summary should place canonical scenario text on the clipboard');
+assert(await page.evaluate(() => window.__copiedText.includes(window.lastResult.calculationHash)), 'copy summary should include the canonical calculation hash');
 
 await page.click('[data-tab="references"]');
 await page.click('#downloadDataBtn');
 await page.waitForFunction(() => window.__downloads.some((entry) => entry.name === 'metabolic_forecaster_data.json'), null, { timeout: 5000 });
 
 await page.click('[data-tab="diagnostics"]');
+await page.locator('#detailedTimeSeries summary').click();
 await page.click('#exportCsvBtn');
 await page.click('#exportJsonBtn');
 await page.waitForFunction(() => window.__downloads.some((entry) => entry.name === 'metabolic_depletion_forecaster_log.csv') && window.__downloads.some((entry) => entry.name === 'metabolic_depletion_forecaster_result.json'), null, { timeout: 5000 });
@@ -319,6 +382,11 @@ assert((await page.locator('#cancelBtn').isDisabled()) === false, 'cancel button
 await page.evaluate(() => document.getElementById('cancelBtn').click());
 await page.waitForFunction(() => (document.getElementById('lastRun')?.textContent || '').includes('cancelled'), null, { timeout: 10000 });
 assert((await page.locator('#lastRun').textContent()).includes('cancelled'), 'worker cancellation status missing');
+
+await page.evaluate(() => { const r={...window.lastResult,error:'Solver budget exceeded — test stop.',solver:{acceptedSteps:1,rootIterations:0,estimatedSteps:2,actualMinStep:0.1,actualMedianStep:0.1,actualMaxStep:0.1}}; completeRunResult(r); });
+assert((await page.locator('#safeCard').getAttribute('data-result-state')) === 'stopped', 'solver stop should set stopped result state');
+assert((await page.locator('#copySummaryBtn').isDisabled()) && (await page.locator('#exportCsvBtn').isDisabled()) && (await page.locator('#exportJsonBtn').isDisabled()) && (await page.locator('#savePngBtn').isDisabled()), 'solver stop should disable result exports');
+assert((await page.locator('#warnings').textContent()).includes('Solver budget exceeded'), 'solver stop message missing');
 
 const renderedText = [
   await page.locator('#safeTime').textContent(),

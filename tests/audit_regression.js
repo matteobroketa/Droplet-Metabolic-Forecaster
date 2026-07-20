@@ -55,7 +55,7 @@ const Blob=globalThis.Blob||function(){};
 const model = new Function(
   modelPrelude +
     html.slice(start, end) +
-    '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, carbonateConstants, carbonateSpecies, solveCarbonateState, boundaryEquilibriumPH, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, parseCalibrationSeries, runCalibrationFit, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec, buildRateScenarioResults, buildExportPayload, buildOccupancyGroupExport, toCSV};'
+    '\nreturn {DATA, STATE_KEY, PHYS, VESSELS, o2Eq, co2Eq, carbonateConstants, carbonateSpecies, solveCarbonateState, boundaryEquilibriumPH, geometryScales, estimateSolverWorkload, Engine, buildOccupancyModel, bulkCellsAt, bulkGroupCellsAt, cellsAt, dryGasPctToHeadspaceMoles, thresholdFromMode, initialFlux, co2HeadEq, parseCalibrationSeries, runCalibrationFit, gatherParams, hardValidateInputs, auditCellDatabase, CELL_DATABASE_ISSUES, applyModePreset, applyVesselPreset, applyPreset, syncVesselControls, vesselSpec, buildRateScenarioResults, buildExportPayload, buildOccupancyGroupExport, toCSV, canonicalCalculationResult, calculationHash, inputQualityGrade, planningTimeLabel};'
 )();
 
 const {
@@ -94,6 +94,10 @@ const {
   buildExportPayload,
   buildOccupancyGroupExport,
   toCSV,
+  canonicalCalculationResult,
+  calculationHash,
+  inputQualityGrade,
+  planningTimeLabel,
 } = model;
 
 const AIR_GAS = { o2: 0.2095, co2: 0.0004 };
@@ -460,7 +464,9 @@ function baseFormValues(overrides = {}) {
     geometryMode: 'auto',
     modelTier: 'heuristic',
     halfTimeMode: 'reference_scaled',
-    rateTemperatureMode: 'reference_37c_q10',
+    rateTemperatureMode: 'reference_q10',
+    rateReferenceTemperature: '37',
+    rateQ10: '2',
     atmMode: 'closed',
     centerPenalty: '1',
     gradientFactor: '1',
@@ -875,6 +881,26 @@ run('only earliest event is retained when multiple thresholds fall in one step',
   assert.strictEqual(r.events.Glutamine, null, 'later glutamine event should not be retained after first stop');
 });
 
+run('simultaneous initial endpoints are recorded at the same instant', () => {
+  const r = Engine.simulate(
+    makeParams({
+      initialO2T: 5,
+      initialO2B: 100,
+      initialO2Oil: 0,
+      initialO2Res: 0,
+      o2Threshold: 5,
+      sub: { glc: 0.2, gln: 4, lac: 0, bicarb: 26 },
+      glucoseFloor: 0.2,
+      rates: { ocr: 0, gcr: 0, lpr: 0, gln: 0 },
+      maxDays: 0.01,
+    })
+  );
+  assert.strictEqual(r.limiter, 'O₂', 'deterministic endpoint priority should select O₂ for an exact tie');
+  approx(r.safeMin, 0, 1e-12, 'simultaneous endpoint time');
+  approx(r.events.O2, 0, 1e-12, 'O₂ endpoint should be recorded at t=0');
+  approx(r.events.Glucose, 0, 1e-12, 'glucose endpoint should be recorded at t=0');
+});
+
 run('closed zero headspace has no fixed gas boundary and conserves oxygen and carbon to horizon', () => {
   const r = Engine.simulate(
     makeParams({
@@ -1098,7 +1124,7 @@ run('calibration parser accepts CSV with header', () => {
 run('single-parameter calibration recovers droplet half-time from synthetic target O2 data', () => {
   const trueParams = makeParams({
     pHModel: 'carbonate_alkalinity',
-    targetCells: 20,
+    targetCells: 1,
     lambda: 0,
     volume_nL: 0.578,
     Vaq_uL: 0.02,
@@ -1112,14 +1138,14 @@ run('single-parameter calibration recovers droplet half-time from synthetic targ
     dropHalf: 12,
     oilHalf: 80,
     gasHalf: 200,
-    rates: { ocr: 1.1, gcr: 0, lpr: 0, gln: 0 },
+    rates: { ocr: 0.2, gcr: 0, lpr: 0, gln: 0 },
     maxDays: 0.25,
-    chartEveryMin: 0.25,
-    logStep: 0.25,
+    chartEveryMin: 1.5,
+    logStep: 1.5,
     o2Threshold: 0,
   });
   const synthetic = Engine.simulate(trueParams);
-  const times_h = [0, 0.5, 1, 2, 3, 4, 5];
+  const times_h = [0, 0.1, 0.2, 0.4, 0.8, 1.2, 1.6, 1.8, 2];
   const series = times_h.map((time_h) => {
     const timeMin = time_h * 60;
     const chart = synthetic.chart;
@@ -1138,9 +1164,17 @@ run('single-parameter calibration recovers droplet half-time from synthetic targ
   const wallStart = Date.now();
   const fit = runCalibrationFit({ ...trueParams, dropHalf: 4 }, { observable: 'O2T', fitMode: 'dropHalf', series });
   const observedWallMs = Date.now() - wallStart;
-  assert(Math.abs(fit.bestFit.dropHalf - 12) < 3, `calibration should recover droplet half-time near 12 min, got ${fit.bestFit.dropHalf}`);
-  assert(fit.intervals.dropHalf.low <= fit.bestFit.dropHalf && fit.intervals.dropHalf.high >= fit.bestFit.dropHalf, 'profile range should contain the best fit');
-  assert.strictEqual(fit.predictionConditionsMatchCurrentSetup, true, 'calibration should report that prediction conditions match the current setup');
+  assert.strictEqual(fit.status, 'identified', (fit.identifiabilityWarnings || []).join(' | '));
+  assert(Math.abs(fit.bestFit.dropHalf - 12) < 2, `calibration should recover droplet half-time near 12 min, got ${fit.bestFit.dropHalf}`);
+  assert(fit.bootstrapIntervals.dropHalf.low <= fit.bestFit.dropHalf && fit.bootstrapIntervals.dropHalf.high >= fit.bestFit.dropHalf, 'bootstrap range should contain the best fit');
+  assert(fit.rmse < 0.01, `noise-free synthetic residual should be numerically zero, got RMSE ${fit.rmse}`);
+  assert(fit.residuals.every((row) => Math.abs(row.residual) < 0.01), 'noise-free residuals should be numerically zero');
+  assert(fit.parameterBounds.dropHalf.low > 0 && fit.parameterBounds.dropHalf.high > fit.parameterBounds.dropHalf.low, 'positive log-space parameter bounds missing');
+  const independentGridMinimum = Math.min(...fit.objectiveSurface.map((candidate) => candidate.sse));
+  approx(fit.sse, independentGridMinimum, 1e-12, 'reported one-parameter objective should equal the independently selected grid minimum');
+  const reordered = runCalibrationFit({ ...trueParams, dropHalf: 4 }, { observable: 'O2T', fitMode: 'dropHalf', series: [...series].reverse() });
+  approx(reordered.sse, fit.sse, 1e-12, 'calibration objective should be invariant to input row order');
+  approx(reordered.bestFit.dropHalf, fit.bestFit.dropHalf, 1e-12, 'fit should be invariant to input row order after sorting');
   assert.strictEqual(fit.telemetry.modelEvaluations, 27, 'calibration model-evaluation telemetry mismatch');
   assert(fit.telemetry.acceptedSteps < 30000, `ordinary five-hour calibration exceeded accepted-step budget: ${fit.telemetry.acceptedSteps}`);
   assert.strictEqual(fit.telemetry.rejectedSteps, 0, 'implicit transport solver should not report rejected steps');
@@ -1149,6 +1183,44 @@ run('single-parameter calibration recovers droplet half-time from synthetic targ
   assert.strictEqual(fit.telemetry.workloadDifference, fit.telemetry.actualSteps - fit.telemetry.estimatedSteps, 'estimated/actual workload difference mismatch');
   assert(observedWallMs < fit.telemetry.performanceBudgetMs, `calibration exceeded ${fit.telemetry.performanceBudgetMs} ms budget: ${observedWallMs} ms`);
   console.log(`  PROBE calibration evaluations=${fit.telemetry.modelEvaluations} accepted=${fit.telemetry.acceptedSteps} rejected=${fit.telemetry.rejectedSteps} estimated=${fit.telemetry.estimatedSteps} minDt=${fit.telemetry.minimumTimestepMin} medianDt=${fit.telemetry.medianTimestepMin} wall=${observedWallMs}ms fit=${fit.bestFit.dropHalf}`);
+});
+
+run('two-parameter calibration reports log-space objective and correlation diagnostics', () => {
+  const trueParams = makeParams({
+    targetCells: 1,
+    lambda: 0,
+    volume_nL: 0.578,
+    Vaq_uL: 0.02,
+    totalEmulsion_uL: 0.02,
+    VoilEmul_uL: 0.01,
+    residualOil_uL: 0.03,
+    initialO2T: 204,
+    initialO2B: 204,
+    initialO2Oil: 204,
+    initialO2Res: 204,
+    dropHalf: 10,
+    oilHalf: 60,
+    gasHalf: 200,
+    rates: { ocr: 0.2, gcr: 0, lpr: 0, gln: 0 },
+    maxDays: 0.2,
+    chartEveryMin: 1.5,
+    logStep: 1.5,
+    o2Threshold: 0,
+  });
+  const simulated = Engine.simulate(trueParams);
+  const times = [0, 0.1, 0.2, 0.4, 0.8, 1.2, 1.6, 1.8, 2];
+  const series = times.map((time_h) => {
+    const timeMin = time_h * 60;
+    const chart = simulated.chart;
+    let point = chart.at(-1);
+    for (let i = 1; i < chart.length; i += 1) if (timeMin <= chart[i].t) { const a = chart[i - 1], b = chart[i], f = (timeMin - a.t) / Math.max(1e-9, b.t - a.t); point = { O2T: a.O2T + (b.O2T - a.O2T) * f }; break; }
+    return { time_h, observed: point.O2T };
+  });
+  const fit = runCalibrationFit({ ...trueParams, dropHalf: 4, oilHalf: 20 }, { observable: 'O2T', fitMode: 'dropHalf+oilHalf', series });
+  assert.strictEqual(fit.objectiveSurface.length, 121, 'two-parameter fit should evaluate its 11×11 log-space grid');
+  approx(fit.sse, Math.min(...fit.objectiveSurface.map((candidate) => candidate.sse)), 1e-12, 'reported two-parameter objective should equal the grid-search minimum');
+  assert(fit.objectiveSurface.every((candidate) => candidate.values.every((value) => value > 0)), 'log-space grid must never evaluate negative half-times');
+  assert(Array.isArray(fit.parameterCorrelationMatrix) && fit.parameterCorrelationMatrix.length === 2 && fit.parameterCorrelationMatrix[0].length === 2, 'two-parameter correlation matrix missing');
 });
 
 run('carbonate alkalinity solver matches an independent equilibrium root', () => {
@@ -1289,6 +1361,33 @@ run('true Poisson nutrient capacities persist in auto, shared, and grouped O2 mo
     approx(exported.reconciliation.population, 0, 1e-9, 'export population reconciliation failed');
     for (const group of ['empty', 'single', 'multi']) assert(Number.isFinite(exported.groups[group].capacity_nL), `export ${group} capacity missing`);
   }
+});
+
+run('zero and near-zero Poisson occupancy have exact zero-demand behavior and bounded runtime', () => {
+  const zero = buildOccupancyModel(0, 1000, 0);
+  assert.strictEqual(zero.expectedBulkCells, 0, 'lambda=0 bulk population must be exactly zero');
+  assert.strictEqual(zero.occupiedDroplets, 0, 'lambda=0 must have no occupied bulk droplets');
+  assert.strictEqual(zero.tailProbability, 0, 'lambda=0 must have no truncation tail');
+  const zeroResult = Engine.simulate(makeParams({ lambda: 0, targetCells: 0, occupancy: zero, rates: { ocr: 2, gcr: 3, lpr: 4, gln: 1 }, maxDays: 0.02, o2Threshold: 0 }));
+  assert.strictEqual(zeroResult.mass.o2Consumed, 0, 'empty droplets must not consume oxygen');
+  assert.strictEqual(zeroResult.mass.glucoseConsumed, 0, 'empty droplets must not consume glucose');
+  assert.strictEqual(zeroResult.mass.glutamineConsumed, 0, 'empty droplets must not consume glutamine');
+  assert.strictEqual(zeroResult.mass.lactateProduced, 0, 'empty droplets must not produce lactate');
+  for (const lambda of [0, 1e-12, 1e-6, 0.3]) {
+    const occupancy = buildOccupancyModel(lambda, 1000, 0);
+    const r = Engine.simulate(makeParams({ lambda, targetCells: 0, occupancy, maxDays: 0.02, maxAcceptedSteps: 5000, o2Threshold: 0 }));
+    assert.strictEqual(r.error, null, `lambda=${lambda} should not exhaust the solver step budget: ${r.error}`);
+    assert(r.solver.acceptedSteps < 5000, `lambda=${lambda} runtime should remain bounded`);
+  }
+});
+
+run('truncated Poisson probabilities normalize and converge as the retained limit increases', () => {
+  const low = buildOccupancyModel(2, 1000, 1, { maxK: 16 });
+  const high = buildOccupancyModel(2, 1000, 1, { maxK: 64 });
+  const normalizedMass = 1 - high.tailProbability;
+  approx(normalizedMass / high.retainedProbability, 1, 1e-12, 'retained Poisson probabilities should normalize to one');
+  assert(high.tailProbability < low.tailProbability, 'larger truncation limit should reduce the explicit tail');
+  approx(low.expectedBulkCells, high.expectedBulkCells, 1e-6, 'expected bulk demand should converge with a sufficient truncation limit');
 });
 
 run('stress-limited growth matches legacy logistic when local conditions stay near initial values', () => {
@@ -1563,6 +1662,38 @@ run('timestep refinement changes endpoint only slightly', () => {
   assert(Math.abs(coarse.safeMin - fine.safeMin) < 0.05, `endpoint should converge under timestep refinement, got ${coarse.safeMin} vs ${fine.safeMin}`);
 });
 
+run('coupled transport solver converges under refinement without mass drift', () => {
+  const base = {
+    volume_nL: 0.5,
+    Vaq_uL: 0.02,
+    totalEmulsion_uL: 0.02,
+    VoilEmul_uL: 3,
+    residualOil_uL: 5,
+    targetCells: 2,
+    lambda: 0.6,
+    rates: { ocr: 0.8, gcr: 0.3, lpr: 0.45, gln: 0.1 },
+    initialO2T: 90,
+    initialO2B: 110,
+    initialO2Oil: 150,
+    initialO2Res: 160,
+    gasHalf: 3,
+    oilHalf: 5,
+    dropHalf: 2,
+    maxDays: 0.04,
+    o2Threshold: 0,
+    atmMode: 'closed',
+    headspace_mL: 0.2,
+  };
+  const coarse = Engine.simulate(makeParams({ ...base, maxStepMin: 0.4 }));
+  const fine = Engine.simulate(makeParams({ ...base, maxStepMin: 0.025 }));
+  assert.strictEqual(coarse.error, null, `coarse solver failed: ${coarse.error}`);
+  assert.strictEqual(fine.error, null, `fine solver failed: ${fine.error}`);
+  approx(coarse.final.O2T, fine.final.O2T, 0.05, 'refined target O₂ trajectory');
+  approx(coarse.final.Glc, fine.final.Glc, 0.01, 'refined glucose trajectory');
+  assert(coarse.mass.o2ResidualPct < 1e-5, `coarse closed O₂ residual too large: ${coarse.mass.o2ResidualPct}`);
+  assert(fine.mass.o2ResidualPct < 1e-5, `fine closed O₂ residual too large: ${fine.mass.o2ResidualPct}`);
+});
+
 run('pH ceiling endpoint is refined onto the threshold state', () => {
   const r = Engine.simulate(
     makeParams({
@@ -1744,20 +1875,35 @@ run('closed preset does not rely on a stale manual headspace value', () => {
   });
 });
 
-run('rate temperature interpretation applies Q10 only in reference mode', () => {
-  withMockDom(baseFormValues({ temperature: '33', rateTemperatureMode: 'reference_37c_q10' }), () => {
+run('explicit Q10 correction is applied once and condition-matched rates can disable it', () => {
+  let referenceRates;
+  withMockDom(baseFormValues({ temperature: '37', rateTemperatureMode: 'reference_q10', rateReferenceTemperature: '37', rateQ10: '2' }), () => {
     const p = gatherParams();
-    assert(p.q10Factor.ocr < 1, '33 C reference mode should reduce OCR via Q10');
+    referenceRates = { ...p.rates };
+    assert.strictEqual(p.rateApplicationMode, 'reference_q10_extrapolation', 'Q10 rate application mode should be explicit');
+    assert.strictEqual(p.temperatureMultiplier, 1, 'reference-temperature multiplier must equal one exactly');
   });
-  withMockDom(baseFormValues({ temperature: '42', rateTemperatureMode: 'reference_37c_q10' }), () => {
+  withMockDom(baseFormValues({ temperature: '47', rateTemperatureMode: 'reference_q10', rateReferenceTemperature: '37', rateQ10: '2' }), () => {
     const p = gatherParams();
-    assert(p.q10Factor.ocr > 1, '42 C reference mode should increase OCR via Q10');
+    assert.strictEqual(p.temperatureMultiplier, 2, 'a 10 C increase must multiply rates by Q10 exactly');
+    for (const key of ['ocr', 'gcr', 'lpr', 'gln']) approx(p.rates[key], referenceRates[key] * 2, 1e-12, `${key} should receive exactly one Q10 multiplier`);
   });
-  withMockDom(baseFormValues({ temperature: '33', rateTemperatureMode: 'measured_selected_temperature' }), () => {
+  withMockDom(baseFormValues({ temperature: '47', rateTemperatureMode: 'condition_matched', rateReferenceTemperature: '37', rateQ10: '2' }), () => {
     const p = gatherParams();
-    approx(p.q10Factor.ocr, 1, 1e-12, 'measured-temperature mode should not apply OCR Q10');
-    approx(p.q10Factor.gcr, 1, 1e-12, 'measured-temperature mode should not apply GCR Q10');
+    assert.strictEqual(p.rateApplicationMode, 'condition_matched_direct', 'condition-matched mode should be explicit');
+    assert.strictEqual(p.temperatureMultiplier, 1, 'condition-matched mode must not extrapolate');
+    for (const key of ['ocr', 'gcr', 'lpr', 'gln']) approx(p.rates[key], referenceRates[key], 1e-12, `${key} should remain measured when correction is disabled`);
   });
+  const base = makeParams({ targetCells: 1, lambda: 0, rates: { ocr: 0.5, gcr: 0, lpr: 0, gln: 0 }, initialO2T: 10, initialO2B: 10, initialO2Oil: 0, initialO2Res: 0, VoilEmul_uL: 0, residualOil_uL: 0, headspace_mL: 0, gasHalf: 1e9, oilHalf: 1e9, dropHalf: 1e9, o2Threshold: 1, maxDays: 0.05 });
+  const reference = Engine.simulate(base);
+  const warmer = Engine.simulate({ ...base, rates: { ...base.rates, ocr: base.rates.ocr * 2 } });
+  assert(warmer.safeMin < reference.safeMin, `higher Q10-scaled demand should shorten threshold time: ${warmer.safeMin} vs ${reference.safeMin}`);
+});
+
+run('one complete copy-summary implementation is present', () => {
+  assert.strictEqual((html.match(/function copySummary\(/g) || []).length, 1, 'copy summary must have exactly one implementation');
+  assert(html.includes('Deterministic demand range:'), 'copy summary should retain its complete demand-range section');
+  assert(html.includes('source commit ${artifactMetadata().sourceCommit}'), 'copy summary should retain release provenance');
 });
 
 run('deterministic rate scenarios use stored low/nominal/high bounds', () => {
@@ -1841,6 +1987,58 @@ run('generic min/max enforcement catches temperature, surface exposure, and deci
       assert(p.invalid.some((msg) => msg.includes('Temperature')), 'temperature max validation missing');
       assert(p.invalid.some((msg) => msg.includes('Direct exposed emulsion oil')), 'surface access max validation missing');
       assert(p.invalid.some((msg) => msg.includes('Decimals')), 'decimals max validation missing');
+    }
+  );
+});
+
+run('evidence-gated planning scenarios reduce precision and keep high demand conservative', () => {
+  const proxy = makeParams({ cell: { id: 'proxy', name: 'Proxy', rateTier: 'C' }, directMeasuredRates: false, halfTimeMode: 'reference_scaled', med: { id: 'test_medium' }, pHModel: 'heuristic_legacy', geometryMode: 'auto' });
+  const measured = makeParams({ cell: { id: 'custom', name: 'Measured', rateTier: 'A' }, directMeasuredRates: true, halfTimeMode: 'measured_effective', med: { id: 'custom_medium' }, pHModel: 'carbonate_alkalinity', geometryMode: 'measured' });
+  const proxyQuality = inputQualityGrade(proxy), measuredQuality = inputQualityGrade(measured);
+  assert(proxyQuality.grade > measuredQuality.grade, 'lower evidence quality must receive a lower grade');
+  assert(planningTimeLabel(81.6732 * 60, proxyQuality).includes('approximately') && !planningTimeLabel(81.6732 * 60, proxyQuality).includes('6732'), 'proxy planning output must not expose excessive precision');
+  const p = makeParams({
+    cell: { id: 'bounded', name: 'Bounded', rateTier: 'A', ocr: 0, ocrLow: 0, ocrHigh: 0, gcr: 1, gcrLow: 0.5, gcrHigh: 2, lpr: 0, lprLow: 0, lprHigh: 0, gln: 0, glnLow: 0, glnHigh: 0 },
+    rates: { ocr: 0, gcr: 1, lpr: 0, gln: 0 }, targetCells: 1, lambda: 0, sub: { glc: 1, gln: 10, lac: 0, bicarb: 26 }, glucoseFloor: 0.1,
+    initialO2T: 100, initialO2B: 100, initialO2Oil: 100, initialO2Res: 100, gasHalf: 1e9, oilHalf: 1e9, dropHalf: 1e9, o2Threshold: 0, maxDays: 0.05,
+  });
+  const scenarios = buildRateScenarioResults(p), high = scenarios.find((scenario) => scenario.id === 'high_demand'), nominal = scenarios.find((scenario) => scenario.id === 'nominal');
+  assert(high.safeMin <= nominal.safeMin + 1e-9, `high-demand scenario must not deplete nutrients later: ${high.safeMin} vs ${nominal.safeMin}`);
+});
+
+run('canonical calculation result is immutable and drives consistent exports', () => {
+  withMockDom(baseFormValues(), () => {
+    const p = gatherParams();
+    const raw = Engine.simulate(p);
+    raw.rateScenarios = buildRateScenarioResults(p);
+    const r = canonicalCalculationResult(raw);
+    assert(Object.isFrozen(r) && Object.isFrozen(r.params) && Object.isFrozen(r.timeSeries), 'canonical calculation result must be deeply immutable');
+    assert.strictEqual(r.calculationSchema, 'droplet-metabolic-calculation-result/v1', 'canonical calculation schema missing');
+    assert(r.calculationHash && r.calculationHash === calculationHash({release:r.release,inputs:r.normalizedInputs,derived:r.derivedParameters,events:r.thresholdEvents,limiter:r.limiter,safeMin:r.safeMin,final:r.final,rateScenarios:r.rateScenarios||[],calibration:r.calibration||null}), 'deterministic calculation hash mismatch');
+    const payload = buildExportPayload(r);
+    const csv = toCSV(r);
+    assert.strictEqual(payload.calculationHash, r.calculationHash, 'JSON export must retain canonical calculation hash');
+    assert(csv.includes(r.calculationHash), 'CSV export must retain canonical calculation hash');
+    assert(csv.includes(`,${r.safeMin},${r.limiter},`), 'CSV export must retain canonical limiting time and label');
+    assert(payload.valueProvenance && Object.values(payload.valueProvenance).every(Boolean), 'every canonical output group requires provenance');
+    const reproduced = canonicalCalculationResult({ ...Engine.simulate(payload.effectiveParameters), rateScenarios: buildRateScenarioResults(payload.effectiveParameters) });
+    assert.strictEqual(reproduced.calculationHash, r.calculationHash, 're-imported effective configuration should reproduce the same calculation hash');
+    const augmented = canonicalCalculationResult({ ...r, calibration: { fitMode: 'dropHalf', bestFit: { dropHalf: 12 } } });
+    assert(Object.isFrozen(augmented) && Object.isFrozen(augmented.calibration), 'augmented canonical result must remain deeply frozen');
+    assert.notStrictEqual(augmented.calculationHash, r.calculationHash, 'calibration augmentation must recalculate the calculation hash');
+  });
+});
+
+run('NaN and overflowing numeric inputs are rejected before solver execution', () => {
+  withMockDom(
+    baseFormValues({
+      maxDays: 'NaN',
+      ocrOverride: '1e309',
+    }),
+    () => {
+      const p = gatherParams();
+      assert(p.invalid.some((msg) => msg.includes('Simulation horizon') && msg.includes('finite number')), 'NaN simulation horizon should be rejected');
+      assert(p.invalid.some((msg) => msg.includes('OCR override') && msg.includes('finite number')), 'overflowing OCR override should be rejected');
     }
   );
 });
@@ -1950,7 +2148,7 @@ run('grouped bulk O2 converges to the shared mean-field limit when exchange is f
   approx(grouped.final.O2BulkOccupied, shared.final.O2BulkOccupied, 0.25, 'grouped fast-exchange limit should match shared bulk oxygen within a tight fast-exchange tolerance');
 });
 
-run('auto bulk O2 warns instead of switching when exchange is slow', () => {
+run('auto bulk O2 switches to grouped transport when exchange is slow', () => {
   const lambda = 0.1;
   const occupancy = buildOccupancyModel(lambda, 1000, 0);
   const base = makeParams({
@@ -1974,14 +2172,14 @@ run('auto bulk O2 warns instead of switching when exchange is slow', () => {
     o2Threshold: 0,
   });
   const auto = Engine.simulate(base);
-  const shared = Engine.simulate({ ...base, bulkO2Mode: 'shared_mean_field' });
-  assert.strictEqual(auto.bulkO2Regime.selectedMode, 'shared_mean_field', 'auto mode should retain the shared oil reservoir');
+  const grouped = Engine.simulate({ ...base, bulkO2Mode: 'grouped_transport_limited' });
+  assert.strictEqual(auto.bulkO2Regime.selectedMode, 'grouped_transport_limited', 'auto mode should switch to grouped transport when depletion outruns exchange');
   assert.strictEqual(auto.bulkO2Regime.recommendedMode, 'grouped_transport_limited', 'auto mode should recommend grouped transport when depletion outruns exchange');
-  assert.strictEqual(auto.bulkO2Regime.warningOnly, true, 'transport-limited auto mode should issue a warning instead of switching');
-  approx(auto.safeMin, shared.safeMin, 1e-9, 'auto warning mode should still execute the shared mean-field model');
+  assert.strictEqual(auto.bulkO2Regime.warningOnly, false, 'transport-limited auto mode should not leave a shared-model warning-only state');
+  approx(auto.safeMin, grouped.safeMin, 1e-9, 'auto mode should execute the grouped transport model');
 });
 
-run('auto bulk O2 warns when proliferation makes later depletion transport-limited', () => {
+run('auto bulk O2 switches when proliferation makes later depletion transport-limited', () => {
   const base = makeParams({
     bulkO2Mode: 'auto',
     halfTimeMode: 'measured_effective',
@@ -2004,11 +2202,11 @@ run('auto bulk O2 warns when proliferation makes later depletion transport-limit
   const auto = Engine.simulate(base);
   const grouped = Engine.simulate({ ...base, bulkO2Mode: 'grouped_transport_limited' });
   const shared = Engine.simulate({ ...base, bulkO2Mode: 'shared_mean_field' });
-  assert.strictEqual(auto.bulkO2Regime.selectedMode, 'shared_mean_field', 'auto mode should keep the shared oil reservoir active');
+  assert.strictEqual(auto.bulkO2Regime.selectedMode, 'grouped_transport_limited', 'auto mode should switch to grouped transport when later depletion competes with exchange');
   assert.strictEqual(auto.bulkO2Regime.recommendedMode, 'grouped_transport_limited', 'later transport limitation should recommend grouped transport');
-  assert.strictEqual(auto.bulkO2Regime.warningOnly, true, 'later transport limitation should issue a shared-model warning');
+  assert.strictEqual(auto.bulkO2Regime.warningOnly, false, 'later transport limitation should not remain warning-only');
   assert(auto.bulkO2Regime.sampledTimeMin > 0, 'transport limitation should be detected from a later sampled time, not only the initial state');
-  approx(auto.safeMin, shared.safeMin, 1e-9, 'auto warning mode should still run the shared reference');
+  approx(auto.safeMin, grouped.safeMin, 1e-9, 'auto mode should run the grouped reference');
   assert(Math.abs(grouped.safeMin - shared.safeMin) > 1e-6 || Math.abs(grouped.final.O2BulkOccupied - shared.final.O2BulkOccupied) > 1e-6, 'grouped comparison should remain available when later transport limitation matters');
 });
 
