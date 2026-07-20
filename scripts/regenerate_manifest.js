@@ -16,13 +16,14 @@ for (const relativePath of Object.keys(manifest.files || {})) {
 manifest.artifactSha256 = canonicalFileSha256(artifactPath);
 manifest.files['metabolic_depletion_forecaster.html'] = manifest.artifactSha256;
 const manifestHash = stableArtifactManifestHash(manifest);
-let artifact = fs.readFileSync(artifactPath, 'utf8');
-artifact = artifact.replace(/(<meta name="artifact-commit" content=")[0-9a-f]{40}("\s*\/?>)/i, `$1${manifest.sourceCommit}$2`);
-artifact = artifact.replace(/(<meta name="artifact-source-commit" content=")[0-9a-f]{40}("\s*\/?>)/i, `$1${manifest.sourceCommit}$2`);
-artifact = artifact.replace(/(<meta name="artifact-manifest-sha256" content=")[A-F0-9]{64}("\s*\/?>)/, `$1${manifestHash}$2`);
-fs.writeFileSync(artifactPath, artifact, 'utf8');
-
-manifest.artifactSha256 = canonicalFileSha256(artifactPath);
-manifest.files['metabolic_depletion_forecaster.html'] = manifest.artifactSha256;
+const artifact = fs.readFileSync(artifactPath, 'utf8');
+const requiredMetadata = [
+  `meta name="artifact-commit" content="${manifest.sourceCommit}"`,
+  `meta name="artifact-source-commit" content="${manifest.sourceCommit}"`,
+  `meta name="artifact-manifest-sha256" content="${manifestHash}"`,
+];
+if (requiredMetadata.some((value) => !artifact.includes(value))) {
+  throw new Error('Canonical HTML release metadata is stale. Update metabolic_depletion_forecaster.html directly, then regenerate the manifest.');
+}
 fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 console.log(`Regenerated manifest with canonical-LF artifact hash ${manifest.artifactSha256}.`);
