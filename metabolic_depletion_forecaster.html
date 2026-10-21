@@ -1678,20 +1678,39 @@ function startWorkerJob(kind,payload,{startText,onResult,onProgress,onError}={})
   const source=workerScriptSource();
   if(!source)return false;
   const jobId=`${kind}-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
-  const url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
-  const worker=new Worker(url);
-  activeWorkerJob={jobId,kind,worker,url};
-  setWorkerRunState(true,'');
-  $('#lastRun').textContent=startText||'Running in background…';
-  worker.onmessage=(event)=>{
+  let url=null,worker=null;
+  const fail=error=>{
     if(!activeWorkerJob||activeWorkerJob.jobId!==jobId)return;
-    const msg=event.data||{};
-    if(msg.type==='progress'){if(onProgress)onProgress(msg.progress||{}); return;}
-    if(msg.type==='result'){cleanupWorkerJob(); setWorkerRunState(false,''); if(onResult)onResult(msg.result); return;}
-    if(msg.type==='error'){cleanupWorkerJob(); setWorkerRunState(false,''); if(onError)onError(msg.error||'Worker error');}
+    cleanupWorkerJob();
+    setWorkerRunState(false,'');
+    if(onError)onError(error);
   };
-  worker.postMessage({jobId,kind,payload});
-  return true;
+  try{
+    url=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
+    worker=new Worker(url);
+    activeWorkerJob={jobId,kind,worker,url};
+    setWorkerRunState(true,'');
+    $('#lastRun').textContent=startText||'Running in background…';
+    worker.onmessage=(event)=>{
+      if(!activeWorkerJob||activeWorkerJob.jobId!==jobId)return;
+      const msg=event.data||{};
+      if(msg.type==='progress'){if(onProgress)onProgress(msg.progress||{}); return;}
+      if(msg.type==='result'){cleanupWorkerJob(); setWorkerRunState(false,''); if(onResult)onResult(msg.result); return;}
+      if(msg.type==='error')fail(msg.error||'Worker error');
+    };
+    worker.onerror=event=>{event.preventDefault();fail(event.message||'The background worker could not run.');};
+    worker.addEventListener('messageerror',()=>fail('The background worker returned an unreadable result.'));
+    worker.postMessage({jobId,kind,payload});
+    return true;
+  }catch(error){
+    if(activeWorkerJob?.jobId===jobId)cleanupWorkerJob();
+    else{
+      try{worker?.terminate();}catch(e){}
+      if(url)try{URL.revokeObjectURL(url);}catch(e){}
+    }
+    setWorkerRunState(false,'');
+    return false;
+  }
 }
 function formatWorkerProgress(kind,progress){
   if(kind==='simulate')return `Worker progress ${fmt((progress.fraction||0)*100,0)}% · ${fmt(progress.acceptedSteps||0,0)} accepted steps`;
@@ -1965,7 +1984,7 @@ function runAndRender(){
     startText:'Running calculation in background…',
     onProgress:progress=>{$('#progressNote').textContent=formatWorkerProgress('simulate',progress); $('#lastRun').textContent='Running calculation in background…';},
     onResult:r=>{if(revision!==resultRevision){setResultState('stale','Inputs changed while the forecast was running. Recalculate to update the result.');return;}completeRunResult(r); $('#lastRun').textContent=`Updated ${new Date().toLocaleTimeString()} from worker.`; if(matchMedia('(max-width: 760px)').matches)$('#safeCard').scrollIntoView({behavior:'smooth',block:'start'});},
-    onError:error=>{runAndRenderSync(p); $('#lastRun').textContent=`Worker fallback after error: ${String(error).slice(0,120)}`;}
+    onError:error=>{if(revision!==resultRevision){setResultState('stale','Inputs changed while the forecast was running. Recalculate to update the result.');return;}runAndRenderSync(p); $('#lastRun').textContent=`Worker fallback after error: ${String(error).slice(0,120)}`;}
   }))return;
   runAndRenderSync(p);
 }

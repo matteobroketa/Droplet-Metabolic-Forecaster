@@ -25,5 +25,62 @@ assert.equal(await page.locator('meta[name="artifact-manifest-sha256"]').count()
 assert.deepEqual(errors, [], `Browser errors: ${errors.join(' | ')}`);
 assert.deepEqual(externalRequests, [], `Unexpected external requests: ${externalRequests.join(' | ')}`);
 
+for (const failure of ['constructor', 'runtime', 'postMessage', 'messageerror']) {
+  const fallbackPage = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
+  const fallbackErrors = [];
+  fallbackPage.on('pageerror', error => fallbackErrors.push(error.message));
+  await fallbackPage.addInitScript(mode => {
+    localStorage.setItem('metabolic-forecaster-v19-html-authoritative-20260716', JSON.stringify({maxDays: '0.25'}));
+    const NativeWorker = window.Worker;
+    if (mode === 'constructor') {
+      window.Worker = class { constructor() { throw new DOMException('Workers blocked by browser policy', 'SecurityError'); } };
+    } else if (mode === 'runtime') {
+      window.Worker = class extends NativeWorker {
+        constructor() {
+          const url = URL.createObjectURL(new Blob(['throw new Error("Worker runtime regression fixture");'], {type: 'text/javascript'}));
+          super(url);
+          URL.revokeObjectURL(url);
+        }
+      };
+    } else {
+      window.Worker = class extends NativeWorker {
+        postMessage() {
+          if (mode === 'postMessage') throw new DOMException('Worker message could not be cloned', 'DataCloneError');
+          setTimeout(() => this.dispatchEvent(new MessageEvent('messageerror')), 0);
+        }
+      };
+    }
+  }, failure);
+  console.log('Checking worker failure:', failure);
+  await fallbackPage.goto(`file:///${artifact}`);
+  await fallbackPage.waitForFunction(() => document.querySelector('#safeCard')?.dataset.resultState === 'current', null, { timeout: 30000 }).catch(async error => {
+    throw new Error(failure + ': ' + error.message + ' | ' + await fallbackPage.locator('#resultStatus').textContent() + ' | ' + fallbackErrors.join('; '));
+  });
+  assert.equal(await fallbackPage.locator('#calculateBtn').isEnabled(), true, failure + ': Calculate remained disabled');
+  assert.equal(await fallbackPage.locator('#exportJsonBtn').isEnabled(), true, failure + ': successful fallback was not exportable');
+  assert.equal(await fallbackPage.locator('#cancelBtn').isVisible(), false, failure + ': worker remained active');
+  assert.deepEqual(fallbackErrors, [], failure + ': unhandled browser errors');
+  if (failure === 'runtime' || failure === 'messageerror') assert.match(await fallbackPage.locator('#lastRun').textContent(), /Worker fallback after error/);
+  await fallbackPage.close();
+}
+
+// A late worker error must not publish the old inputs as a current result.
+const staleResult = await page.evaluate(() => {
+  const previous = window.lastResult;
+  window.Worker = class extends EventTarget {
+    constructor() { super(); window.fixtureWorker = this; }
+    postMessage() {}
+    terminate() {}
+  };
+  runAndRender();
+  const input = document.querySelector('#targetCells');
+  input.value = String(Number(input.value) + 1);
+  input.dispatchEvent(new Event('input', {bubbles: true}));
+  clearTimeout(timer);
+  window.fixtureWorker.onerror({preventDefault() {}, message: 'Late worker failure'});
+  return {state: document.querySelector('#safeCard').dataset.resultState, retainedPrevious: window.lastResult === previous, exportDisabled: document.querySelector('#exportJsonBtn').disabled, calculateEnabled: !document.querySelector('#calculateBtn').disabled};
+});
+assert.deepEqual(staleResult, {state: 'stale', retainedPrevious: true, exportDisabled: true, calculateEnabled: true});
+
 await browser.close();
-console.log('Standalone HTML smoke check passed.');
+console.log('Standalone HTML smoke check and worker failure regressions passed.');
