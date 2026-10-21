@@ -21,4 +21,4 @@ On Linux, use `npx playwright install --with-deps chromium` if browser system li
 The checks are intentionally small:
 
 - `npm test` parses the inline application script.
-- `npm run test:browser` opens the standalone file in Chromium and checks that a forecast and timeline render without external requests or browser errors. It also checks recovery from blocked or failed background workers.
+- `npm run test:browser` opens the standalone file in Chromium and checks that a forecast and timeline render without external requests or browser errors. It also checks recovery from blocked or failed background workers and obsolete saved dropdown selections. Unavailable saved choices reset to the visible defaults, with a notice in the result status.

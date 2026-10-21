@@ -4,6 +4,7 @@ import { chromium } from 'playwright';
 
 const artifact = path.resolve('metabolic_depletion_forecaster.html').replace(/\\/g, '/');
 const browser = await chromium.launch({ headless: true });
+try {
 const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
 const errors = [];
 const externalRequests = [];
@@ -24,6 +25,50 @@ assert.ok(await page.locator('[data-chart-view="nutrients"]').evaluate((button) 
 assert.equal(await page.locator('meta[name="artifact-manifest-sha256"]').count(), 0, 'Manifest metadata remains in the tool.');
 assert.deepEqual(errors, [], `Browser errors: ${errors.join(' | ')}`);
 assert.deepEqual(externalRequests, [], `Unexpected external requests: ${externalRequests.join(' | ')}`);
+
+// Saved catalog values can outlive their options after an update. They must
+// never create a "current" forecast with an empty cell/medium/oil definition.
+const defaults = await page.evaluate(() => ({
+  cellLine: document.querySelector('#cellLine').value,
+  medium: document.querySelector('#medium').value,
+  oilType: document.querySelector('#oilType').value,
+  tab: document.querySelector('.tab.active').dataset.tab,
+}));
+for (const saved of [
+  {cellLine: 'removed-cell'}, {medium: 'removed-medium'},
+  {oilType: 'removed-oil'}, {tab: 'removed-tab'},
+  {cellLine: null, medium: {}, oilType: []},
+  {cellLine: 'mcf7', tab: 'environment'},
+]) {
+  const restoredPage = await browser.newPage();
+  const restoredErrors = [];
+  restoredPage.on('pageerror', error => restoredErrors.push(error.message));
+  await restoredPage.addInitScript(saved => {
+    localStorage.setItem('metabolic-forecaster-v19-html-authoritative-20260716', JSON.stringify({maxDays: '0.25', ...saved}));
+  }, saved);
+  await restoredPage.goto(`file:///${artifact}`);
+  await restoredPage.waitForFunction(() => document.querySelector('#safeCard').dataset.resultState === 'current', null, {timeout: 30000});
+  const restored = await restoredPage.evaluate(() => ({
+    cellLine: window.lastResult.params.cell.id,
+    medium: window.lastResult.params.med.id,
+    oilType: window.lastResult.params.oil.id,
+    tab: document.querySelector('.tab.active')?.dataset.tab,
+    activePanels: document.querySelectorAll('.tab-content.active').length,
+    rate: window.lastResult.params.rates.ocr,
+  }));
+  const validSaved = saved.cellLine === 'mcf7';
+  assert.equal(restored.cellLine, validSaved ? 'mcf7' : defaults.cellLine, 'Saved cell selection must resolve to an existing catalog entry');
+  assert.equal(restored.medium, defaults.medium);
+  assert.equal(restored.oilType, defaults.oilType);
+  assert.equal(restored.tab, validSaved ? 'environment' : defaults.tab);
+  assert.equal(restored.activePanels, 1);
+  assert.ok(restored.rate > 0, 'Restoration must not silently zero cell consumption');
+  if (('cellLine' in saved && !validSaved) || 'medium' in saved || 'oilType' in saved) {
+    assert.match(await restoredPage.locator('#resultStatus').textContent(), /unavailable choices reset to defaults/);
+  }
+  assert.deepEqual(restoredErrors, []);
+  await restoredPage.close();
+}
 
 for (const failure of ['constructor', 'runtime', 'postMessage', 'messageerror']) {
   const fallbackPage = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
@@ -82,5 +127,7 @@ const staleResult = await page.evaluate(() => {
 });
 assert.deepEqual(staleResult, {state: 'stale', retainedPrevious: true, exportDisabled: true, calculateEnabled: true});
 
-await browser.close();
+} finally {
+  await browser.close();
+}
 console.log('Standalone HTML smoke check and worker failure regressions passed.');
